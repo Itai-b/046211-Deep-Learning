@@ -1,0 +1,3 @@
+HW/ece046211_hw2_mlp_cnn/datasets/
+HW/ece046211_hw2_mlp_cnn/checkpoints/imagenette_cnn_ckpt.pth
+HW/ece046211_hw2_mlp_cnn/checkpoints/imagenette_cnn_robust.pth
