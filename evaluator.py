@@ -64,7 +64,7 @@ def test_model(model, test_set, device="cuda", index=None):
     model.to(device)  # Move the model to the GPU
     model.eval()  # Set the model to evaluation mode
 
-    test_loader = DataLoader(test_set, batch_size=5, shuffle=True, collate_fn=data_process.collate_fn)
+    test_loader = DataLoader(test_set, batch_size=5, shuffle=False, collate_fn=data_process.collate_fn)
 
     predictions, results, fps = evaluate_model(model, test_loader, num_iterations=1, threshold=0.5)
 
