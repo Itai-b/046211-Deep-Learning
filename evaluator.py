@@ -60,7 +60,7 @@ def evaluate_model(model, data_loader, threshold=0.5, num_iterations=1, batch_si
     results=metric.compute()
     return all_predictions, results, fps
 
-def test_model(model, test_set, device="cuda", index=None):
+def test_model(model, test_set, device="cuda", index=None, model_name=None):
     model.to(device)  # Move the model to the GPU
     model.eval()  # Set the model to evaluation mode
 
@@ -81,4 +81,9 @@ def test_model(model, test_set, device="cuda", index=None):
     batches = list(test_loader)
     images, targets = batches[index]
 
-    data_process.visualize_predictions(images, targets, predictions, threshold=0.5, show_severity=False, title=f"Test Batch #{index}")
+    if model_name is not None:
+        title = f"{model_name} Test Batch #{index}"
+    else:
+        title = f"Test Batch #{index}"
+    
+    data_process.visualize_predictions(images, targets, predictions, threshold=0.5, show_severity=False, title=title)
