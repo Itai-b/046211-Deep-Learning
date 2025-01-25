@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import optuna
 from tqdm import tqdm
+import functools
 import utils
 import evaluator
 import data_process
@@ -26,7 +27,6 @@ op_train_set = None
 op_val_set = None
 save_path = None
 
-# Regular train function
 def train(model, train_loader, val_loader, optimizer, lr_scheduler, num_epochs=10, device="cuda", model_name="", save_path=None, trial=None):
     global model_name_global
     
@@ -41,7 +41,6 @@ def train(model, train_loader, val_loader, optimizer, lr_scheduler, num_epochs=1
     best_val_map = 0.0
     best_epoch = 0
 
-    threshold = 0.01  # Minimum improvement in Val mAP to avoid pruning
     stagnant_epochs = 3  # Number of epochs with insufficient improvement before pruning
     num_fouls = 0  # Number of times the model has failed to improve sufficiently
     
@@ -126,7 +125,7 @@ def train(model, train_loader, val_loader, optimizer, lr_scheduler, num_epochs=1
         "train_losses": train_losses,
         "val_maps": val_maps,
         "best_val_map": best_val_map,
-        "fps_list": fps_list,
+        "fps": np.average(fps_list),
         "train_time": train_time,
         "model_parameters": model_parameters,
         "model_size": model_size
@@ -135,13 +134,109 @@ def train(model, train_loader, val_loader, optimizer, lr_scheduler, num_epochs=1
     return history
     
 ################################# optuna functions #################################
-def get_model(trial):
+def get_model(model_name="", trial=None, preweight_mode='fine_tuning'):
     global model_name_global
     
-    preweight_mode = trial.suggest_categorical('preweight_mode', ['random', 'freezing', 'fine_tuning'])
+    if trial is not None:
+        model_name = model_name_global
+        preweight_mode = trial.suggest_categorical('preweight_mode', ['random', 'freezing', 'fine_tuning'])
     
     # TODO: Add more models
-    if model_name_global == "ssd300_vgg16":
+    
+    if str.startswith(model_name, "fasterrcnn"):
+        if model_name == "fasterrcnn_resnet50_fpn":
+            if preweight_mode == 'random':
+                model = models.detection.fasterrcnn_resnet50_fpn()  # No pre-trained weights
+            else:
+                model = models.detection.fasterrcnn_resnet50_fpn(weights=models.detection.FasterRCNN_ResNet50_FPN_Weights.COCO_V1)
+        elif model_name == "fasterrcnn_resnet50_fpn_v2":
+            if preweight_mode == 'random':
+                model = models.detection.fasterrcnn_resnet50_fpn_v2()  # No pre-trained weights
+            else:
+                model = models.detection.fasterrcnn_resnet50_fpn_v2(weights=models.detection.FasterRCNN_ResNet50_FPN_V2_Weights.COCO_V1)            
+        elif model_name == "fasterrcnn_mobilenet_v3_large_fpn":
+            if preweight_mode == 'random':
+                model = models.detection.fasterrcnn_mobilenet_v3_large_fpn()  # No pre-trained weights
+            else:
+                model = models.detection.fasterrcnn_mobilenet_v3_large_fpn(weights=models.detection.FasterRCNN_MobileNet_V3_Large_FPN_Weights.COCO_V1)            
+        elif model_name == "fasterrcnn_mobilenet_v3_large_320_fpn":
+            if preweight_mode == 'random':
+                model = models.detection.fasterrcnn_mobilenet_v3_large_320_fpn()  # No pre-trained weights
+            else:
+                model = models.detection.fasterrcnn_mobilenet_v3_large_320_fpn(weights=models.detection.FasterRCNN_MobileNet_V3_Large_320_FPN_Weights.COCO_V1)        
+        else:
+            return None
+        
+        # Replace the classifier with a single-class output
+        num_classes = len(data_process.PotholeSeverity)
+        in_features = model.roi_heads.box_predictor.cls_score.in_features
+        model.roi_heads.box_predictor = models.detection.faster_rcnn.FastRCNNPredictor(in_features, num_classes) 
+        
+        if preweight_mode == 'freezing':
+            # Freeze all layers except the head
+            for param in model.parameters():
+                param.requires_grad = False
+            for param in model.roi_heads.box_predictor.parameters():
+                param.requires_grad = True
+        
+        return model
+          
+    if str.startswith(model_name, "retinanet"):
+        if model_name == "retinanet_resnet50_fpn":
+            if preweight_mode == 'random':
+                model = models.detection.retinanet_resnet50_fpn()
+            else:
+                model = models.detection.retinanet_resnet50_fpn(weights=models.detection.RetinaNet_ResNet50_FPN_Weights.COCO_V1)
+        elif model_name == "retinanet_resnet50_fpn_v2":
+            if preweight_mode == 'random':
+                model = models.detection.retinanet_resnet50_fpn_v2()
+            else:
+                model = models.detection.retinanet_resnet50_fpn_v2(weights=models.detection.RetinaNet_ResNet50_FPN_V2_Weights.COCO_V1)
+        else:
+            return None
+        
+        num_anchors = model.head.classification_head.num_anchors
+        model.head.classification_head = models.detection.retinanet.RetinaNetClassificationHead(
+            in_channels=256,
+            num_anchors=num_anchors,
+            num_classes=len(data_process.PotholeSeverity),
+            norm_layer=functools.partial(torch.nn.GroupNorm, 32)
+        )
+        
+        if preweight_mode == 'freezing':
+            # Freeze all layers except the head
+            for param in model.parameters():
+                param.requires_grad = False
+            for param in model.head.classification_head.parameters():
+                param.requires_grad = True
+        
+        return model
+    
+    if model_name == "fcos_resnet50_fpn":
+        if preweight_mode == 'random':
+            model = models.detection.fcos_resnet50_fpn()
+        else:
+            model = models.detection.fcos_resnet50_fpn(weights=models.detection.FCOS_ResNet50_FPN_Weights.COCO_V1)
+            
+        # Replace the classifier with a Pothole-class output
+        num_anchors = model.head.classification_head.num_anchors
+        model.head.classification_head = models.detection.fcos.FCOSClassificationHead(
+        in_channels=256,
+        num_anchors=num_anchors,
+        num_classes=len(data_process.PotholeSeverity),
+        norm_layer=functools.partial(torch.nn.GroupNorm, 32)
+        )
+        
+        if preweight_mode == 'freezing':
+            # Freeze all layers except the head
+            for param in model.parameters():
+                param.requires_grad = False
+            for param in model.head.classification_head.parameters():
+                param.requires_grad = True
+        
+        return model
+          
+    if model_name == "ssd300_vgg16":
         if preweight_mode == 'random':
             model = models.detection.ssd300_vgg16()
         else:
@@ -174,6 +269,41 @@ def get_model(trial):
             for param in model.head.regression_head.parameters():
                 param.requires_grad = True
         
+        return model
+    
+    if model_name == "ssdlite320_mobilenet_v3_large":
+        if preweight_mode == 'random':
+            model = models.detection.ssdlite320_mobilenet_v3_large()
+        else:
+            model = models.detection.ssdlite320_mobilenet_v3_large(weights=models.detection.SSDLite320_MobileNet_V3_Large_Weights.COCO_V1)
+
+        # Retrieve the list of input channels. 
+        num_classes = len(data_process.PotholeSeverity)
+        in_channels = models.detection._utils.retrieve_out_channels(model.backbone, (320, 320))
+        # List containing number of anchors based on aspect ratios.
+        num_anchors = model.anchor_generator.num_anchors_per_location()
+        # The classification head.
+        model.head.classification_head = models.detection.ssd.SSDClassificationHead(
+            in_channels=in_channels,
+            num_anchors=num_anchors,
+            num_classes=num_classes,
+        )
+
+        # Image size for transforms.
+        model.transform.min_size = (320,)
+        model.transform.max_size = 320
+        
+        if preweight_mode == 'freezing':
+            # Freeze all layers except the classification and regression heads
+            for param in model.parameters():
+                param.requires_grad = False
+            # Unfreeze the classification head
+            for param in model.head.classification_head.parameters():
+                param.requires_grad = True
+            # Unfreeze the box regression head
+            for param in model.head.regression_head.parameters():
+                param.requires_grad = True
+                
         return model
     
     return None
@@ -254,7 +384,7 @@ def objective(trial):
         collate_fn=data_process.collate_fn
     )
 
-    model = get_model(trial)
+    model = get_model(trial=trial)
     if model is None:
         raise ValueError("Invalid model")
     
@@ -263,7 +393,6 @@ def objective(trial):
     # Get optimizer and scheduler
     optimizer = get_optimizer(trial, model.parameters())
     scheduler = get_scheduler(trial, optimizer, num_epochs, len(train_loader))
-    
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")    
     

@@ -22,9 +22,11 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 pin_memory = True if device == "cuda:0" else False
 
 
-# Constants
+# Global Variables (normalize() function overwrites train_mean and train_std values)
 train_mean = torch.tensor([0.5288, 0.5161, 0.4917])
 train_std = torch.tensor([0.1826, 0.1745, 0.1723])
+
+# Data directories
 img_dir = 'data/chitholian_annotated_potholes_dataset/images'
 ann_dir = 'data/chitholian_annotated_potholes_dataset/annotations'
 
@@ -198,6 +200,8 @@ def normalize(train_set):
     """
     check the mean and std of the training set (use before normalizing the images)
     """
+    global train_mean, train_std
+    
     # normalize the images according to the mean and std of the training set
     # DataLoader for train set
     train_loader = DataLoader(train_set, batch_size=32, shuffle=False, num_workers=2, collate_fn=collate_fn)
@@ -245,7 +249,7 @@ def load_data(transform, input_size=300):
     
     return train_set, val_set, test_set
 
-def convert_to_imshow_format(image, mean, std):
+def convert_to_imshow_format(image, mean=train_mean, std=train_std):
     """
     Converts a normalized image tensor to the format expected by plt.imshow.
     Args:
@@ -267,12 +271,14 @@ def convert_to_imshow_format(image, mean, std):
 
 def show_images(images, targets, title=""):
     # Create a figure with subplots
-    fig, axes = plt.subplots(1, len(images), figsize=(15, 5))
+    fig, axes = plt.subplots(1, len(images), figsize=(len(images)*3, 5))
 
     for idx, (img, target) in enumerate(zip(images, targets)):
-        # Convert image to imshow format
-        img_np = convert_to_imshow_format(img, train_mean, train_std)
-        img_np = np.ascontiguousarray(img_np)  # Ensure compatibility with OpenCV
+        if isinstance(img, torch.Tensor):
+            img_np = convert_to_imshow_format(img, train_mean, train_std)
+            img_np = np.ascontiguousarray(img_np)  # Ensure compatibility with OpenCV
+        else:
+            img_np = np.ascontiguousarray(img)
         
         # Draw bounding boxes and labels
         for box, label in zip(target["boxes"], target["labels"]):
