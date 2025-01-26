@@ -13,6 +13,7 @@ import numpy as np
 import optuna
 from tqdm import tqdm
 import functools
+import json
 import utils
 import evaluator
 import data_process
@@ -133,7 +134,66 @@ def train(model, train_loader, val_loader, optimizer, lr_scheduler, num_epochs=1
     
     return history
     
-################################# optuna functions #################################
+def train_from_config(model_config_path, train_set, val_set, save_path="data/models"):
+    with open(model_config_path, 'r') as f:
+        model_config = json.load(f)
+    
+    model_name = model_config["model_name"]
+    params = model_config["params"]
+    
+    train_loader = DataLoader(
+        train_set,
+        batch_size=params["batch_size"],
+        shuffle=True,
+        collate_fn=data_process.collate_fn
+    )
+    
+    val_loader = DataLoader(
+        val_set,
+        batch_size=params["batch_size"],
+        shuffle=False,
+        collate_fn=data_process.collate_fn
+    )
+    
+    model = get_model(model_name=model_name, preweight_mode=params['preweight_mode'])
+    if model is None:
+        raise ValueError("Invalid model")
+    
+    if params['optimizer'] == 'SGD':
+        optimizer_params = [params['lr'], params['momentum'], params['weight_decay']]
+    elif params['optimizer'] == 'Adam':
+        optimizer_params = [params['lr'], params['beta1'], params['beta2']]
+    elif params['optimizer'] == 'AdamW':
+        optimizer_params = [params['lr'], params['weight_decay'], params['beta1'], params['beta2']]
+    elif params['optimizer'] == 'RMSprop':
+        optimizer_params = [params['lr'], params['weight_decay'], params['momentum']]
+    else:
+        raise ValueError("Invalid optimizer")
+    
+    optimizer = get_optimizer(model.parameters(), optimizer_name=params['optimizer'], optimizer_params=optimizer_params)
+    
+    if params['scheduler'] == 'StepLR':
+        scheduler_params = [params['step_size'], params['gamma']]
+    elif params['scheduler'] == 'CosineAnnealingLR':
+        scheduler_params = [params['T_max'], params['eta_min']]
+    elif params['scheduler'] == 'ReduceLROnPlateau':
+        scheduler_params = [params['factor'], params['patience']]
+    elif params['scheduler'] == 'OneCycleLR':
+        scheduler_params = [params['max_lr']]
+    else:
+        raise ValueError("Invalid scheduler")
+    
+    scheduler = get_scheduler(optimizer, params['epochs'], len(train_loader), scheduler_name=params['scheduler'], scheduler_params=scheduler_params)
+    
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    
+    print(f"Starting training for {model_name} with the following parameters:")
+    print(params)
+    
+    history = train(model, train_loader, val_loader, optimizer, scheduler, params['epochs'], device=device, model_name=model_name, save_path=save_path)
+    
+    return history
+
 def get_model(model_name="", trial=None, preweight_mode='fine_tuning'):
     global model_name_global
     
@@ -308,58 +368,107 @@ def get_model(model_name="", trial=None, preweight_mode='fine_tuning'):
     
     return None
 
-def get_optimizer(trial, model_parameters):
+def get_optimizer(model_parameters, trial=None, optimizer_name='SGD', optimizer_params=[]):
+    global possible_optimizers
+    
     # Suggest optimizer type
-    optimizer_name = trial.suggest_categorical('optimizer', possible_optimizers)
+    if trial is not None:
+        optimizer_name = trial.suggest_categorical('optimizer', possible_optimizers)
 
+    if optimizer_name not in possible_optimizers:
+        raise ValueError("Invalid optimizer")
+    
     if optimizer_name == 'SGD':
-        momentum = trial.suggest_float('momentum', 0.9, 0.99)
-        lr = trial.suggest_float('lr', 5e-3, 5e-2, log=True)
-        weight_decay = trial.suggest_float('weight_decay', 1e-5, 1e-3, log=True)
+        if trial is not None:
+            lr = trial.suggest_float('lr', 5e-3, 5e-2, log=True)
+            momentum = trial.suggest_float('momentum', 0.9, 0.99)
+            weight_decay = trial.suggest_float('weight_decay', 1e-5, 1e-3, log=True)
+        else:
+            lr = optimizer_params[0]
+            momentum = optimizer_params[1]
+            weight_decay = optimizer_params[2]
         return torch.optim.SGD(model_parameters, lr=lr, momentum=momentum, weight_decay=weight_decay)
     
     elif optimizer_name == 'Adam':
-        lr = trial.suggest_float('lr', 1e-4, 1e-2, log=True)
-        beta1 = trial.suggest_float('beta1', 0.8, 0.999)
-        beta2 = trial.suggest_float('beta2', 0.9, 0.999)
+        if trial is not None:
+            lr = trial.suggest_float('lr', 1e-4, 1e-2, log=True)
+            beta1 = trial.suggest_float('beta1', 0.8, 0.999)
+            beta2 = trial.suggest_float('beta2', 0.9, 0.999)
+        else:
+            lr = optimizer_params[0]
+            beta1 = optimizer_params[1]
+            beta2 = optimizer_params[2]
         return torch.optim.Adam(model_parameters, lr=lr, betas=(beta1, beta2))
     
     elif optimizer_name == 'AdamW':
-        lr = trial.suggest_float('lr', 1e-4, 1e-2, log=True)
-        weight_decay = trial.suggest_float('weight_decay', 1e-3, 1e-2, log=True)
-        beta1 = trial.suggest_float('beta1', 0.8, 0.999)
-        beta2 = trial.suggest_float('beta2', 0.9, 0.999)
+        if trial is not None:
+            lr = trial.suggest_float('lr', 1e-4, 1e-2, log=True)
+            weight_decay = trial.suggest_float('weight_decay', 1e-3, 1e-2, log=True)
+            beta1 = trial.suggest_float('beta1', 0.8, 0.999)
+            beta2 = trial.suggest_float('beta2', 0.9, 0.999)
+        else:
+            lr = optimizer_params[0]
+            weight_decay = optimizer_params[1]
+            beta1 = optimizer_params[2]
+            beta2 = optimizer_params[3]
         return torch.optim.AdamW(model_parameters, lr=lr, betas=(beta1, beta2), weight_decay=weight_decay)
     
     else:  # RMSprop
-        lr = trial.suggest_float('lr', 1e-3, 1e-2, log=True)
-        weight_decay = trial.suggest_float('weight_decay', 1e-1, 1, log=True)
-        momentum = trial.suggest_float('momentum', 0.9, 0.99)
+        if trial is not None:
+            lr = trial.suggest_float('lr', 1e-3, 1e-2, log=True)
+            weight_decay = trial.suggest_float('weight_decay', 1e-1, 1, log=True)
+            momentum = trial.suggest_float('momentum', 0.9, 0.99)
+        else:
+            lr = optimizer_params[0]
+            weight_decay = optimizer_params[1]
+            momentum = optimizer_params[2]
         return torch.optim.RMSprop(model_parameters, lr=lr, momentum=momentum, weight_decay=weight_decay)
 
-def get_scheduler(trial, optimizer, num_epochs, steps_per_epoch):
+def get_scheduler(optimizer, num_epochs, steps_per_epoch, trial=None, scheduler_name=None, scheduler_params=[]):
+    global possible_schedulers
+    
     # Suggest scheduler type
-    scheduler_name = trial.suggest_categorical('scheduler', possible_schedulers)
+    if trial is not None:
+        scheduler_name = trial.suggest_categorical('scheduler', possible_schedulers)
+    
+    if scheduler_name not in possible_schedulers:
+        raise ValueError("Invalid scheduler")
     
     if scheduler_name == 'StepLR':
-        step_size = trial.suggest_int('step_size', 2, 5)
-        gamma = trial.suggest_float('gamma', 0.05, 0.5)
+        if trial is not None:
+            step_size = trial.suggest_int('step_size', 2, 5)
+            gamma = trial.suggest_float('gamma', 0.05, 0.5)
+        else:
+            step_size = scheduler_params[0]
+            gamma = scheduler_params[1]
         return torch.optim.lr_scheduler.StepLR(optimizer, step_size=step_size, gamma=gamma)
     
     elif scheduler_name == 'CosineAnnealingLR':
-        T_max = trial.suggest_int('T_max', 5, 15)
-        eta_min = trial.suggest_float('eta_min', 1e-7, 1e-5, log=True)
+        if trial is not None:
+            T_max = trial.suggest_int('T_max', 5, 15)
+            eta_min = trial.suggest_float('eta_min', 1e-7, 1e-5, log=True)
+        else:
+            T_max = scheduler_params[0]
+            eta_min = scheduler_params[1]
         return torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=T_max, eta_min=eta_min)
     
     elif scheduler_name == 'ReduceLROnPlateau':
-        factor = trial.suggest_float('factor', 0.1, 0.5)
-        patience = trial.suggest_int('patience', 2, 5)
+        if trial is not None:
+            factor = trial.suggest_float('factor', 0.1, 0.5)
+            patience = trial.suggest_int('patience', 2, 5)
+        else:
+            factor = scheduler_params[0]
+            patience = scheduler_params[1]
         return torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='max', factor=factor, patience=patience)
     
     else:  # OneCycleLR
-        max_lr = trial.suggest_float('max_lr', 1e-4, 1e-2, log=True)
+        if trial is not None:
+            max_lr = trial.suggest_float('max_lr', 1e-4, 1e-2, log=True)
+        else:
+            max_lr = scheduler_params[0]
         return torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=max_lr, epochs=num_epochs, steps_per_epoch=steps_per_epoch)
-    
+
+################################# optuna functions #################################
 def objective(trial): 
     global op_train_set, op_val_set, save_path_global  # Declare global variables
     ## clear memory
@@ -391,8 +500,8 @@ def objective(trial):
     print(f"Checking Model: {model.__class__.__name__}")
     
     # Get optimizer and scheduler
-    optimizer = get_optimizer(trial, model.parameters())
-    scheduler = get_scheduler(trial, optimizer, num_epochs, len(train_loader))
+    optimizer = get_optimizer(model.parameters(), trial=trial)
+    scheduler = get_scheduler(optimizer, num_epochs, len(train_loader), trial=trial)
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")    
     
@@ -429,8 +538,10 @@ def run_optimization(model_name, train_set, val_set, study_name="optuna_check", 
     for key, value in trial.params.items():
         print(f"    {key}: {value}")
     
-    # Plot optimization history
-    param_importances = optuna.importance.get_param_importances(study)
+    model_param = {"model_name": model_name, "best_trial": trial.number, "best_val_map": trial.value, "params": trial.params}
+    # Save best params to json, the name is the model name:
+    with open(os.path.join(save_path, f"{model_name}_best_params.json"), 'w') as f:
+        json.dump(model_param, f)
     
     # Save study results
     study.trials_dataframe().to_csv(os.path.join(save_path,"optimization_results.csv"))
