@@ -60,7 +60,8 @@ def evaluate_model(model, data_loader, threshold=0.5, num_iterations=1, batch_si
     results=metric.compute()
     return all_predictions, results, fps
 
-def test_model(model, test_set, device="cuda", index=None, model_name=None):
+def test_model(model, test_set, index=None, model_name=None, history=None, show_batch=True):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)  # Move the model to the GPU
     model.eval()  # Set the model to evaluation mode
 
@@ -71,7 +72,7 @@ def test_model(model, test_set, device="cuda", index=None, model_name=None):
     mean_ap_50=results["map_50"].item()
     print(f"Mean Average Precision @ 0.5 : {mean_ap_50:.4f}",
         f"FPS: {fps:.2f}")
-
+    
     # Select a random batch if index is not provided
     if index is None:
         index = random.randint(0,len(list(test_loader))-1)  # Select a random batch
@@ -86,4 +87,11 @@ def test_model(model, test_set, device="cuda", index=None, model_name=None):
     else:
         title = f"Test Batch #{index+1}"
     
-    data_process.visualize_predictions(images, targets, predictions, threshold=0.5, show_severity=False, title=title)
+    # Visualize the predictions on the selected batch
+    if show_batch:
+        data_process.visualize_predictions(images, targets, predictions, threshold=0.5, show_severity=False, title=title)
+    
+    if history is not None:
+        history['test_map'] = mean_ap_50
+        
+    return history
