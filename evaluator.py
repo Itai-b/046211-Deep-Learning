@@ -74,7 +74,7 @@ def test_model(model, test_set, device="cuda", index=None, model_name=None):
 
     # Select a random batch if index is not provided
     if index is None:
-        index = random.randint(0,len(list(test_loader)))  # Select a random batch
+        index = random.randint(0,len(list(test_loader))-1)  # Select a random batch
     elif index >= len(list(test_loader)):
         raise ValueError("Index out of range")
     
@@ -82,8 +82,8 @@ def test_model(model, test_set, device="cuda", index=None, model_name=None):
     images, targets = batches[index]
 
     if model_name is not None:
-        title = f"{model_name} Test Batch #{index}"
+        title = f"{model_name} Test Batch #{index+1}"
     else:
-        title = f"Test Batch #{index}"
+        title = f"Test Batch #{index+1}"
     
     data_process.visualize_predictions(images, targets, predictions, threshold=0.5, show_severity=False, title=title)

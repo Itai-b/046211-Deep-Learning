@@ -398,6 +398,7 @@ def objective(trial):
     
     # Train the model
     print(f"Starting Trial #{trial.number}")
+    print(trial.params)
     history = train(model, train_loader, val_loader, optimizer, scheduler, num_epochs, device=device, save_path=save_path_global, trial=trial)
         
     return history['best_val_map']
@@ -408,7 +409,7 @@ def run_optimization(model_name, train_set, val_set, study_name="optuna_check", 
     study = optuna.create_study(
         direction="maximize",
         pruner=optuna.pruners.MedianPruner(n_startup_trials=5, n_warmup_steps=5),
-        storage=f"sqlite:///data/models/optuna.db",
+        storage=f"sqlite:///data/models/db.sqlite3",
         study_name=study_name,
         sampler=optuna.samplers.TPESampler(seed=data_process.seed)
     )

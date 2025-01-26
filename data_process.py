@@ -196,6 +196,44 @@ class PotholeDetectionDataset:
 def collate_fn(batch):
     return tuple(zip(*batch))
 
+def xyxy_to_xywh(boxes):
+    """
+    Given a list of bounding boxes in [xmin, ymin, xmax, ymax] format, convert them to [x, y, w, h] format.
+    """
+    return torch.stack([
+        (boxes[:, 0] + boxes[:, 2]) / 2,  # x center
+        (boxes[:, 1] + boxes[:, 3]) / 2,  # y center
+        boxes[:, 2] - boxes[:, 0],  # width
+        boxes[:, 3] - boxes[:, 1],  # height
+    ], dim=1)
+    
+def xywh_to_xyxy(boxes):
+    """
+    Given a list of bounding boxes in [x, y, w, h] format, convert them to [xmin, ymin, xmax, ymax] format.
+    """
+    return torch.stack([
+        boxes[:, 0] - boxes[:, 2] / 2,  # xmin
+        boxes[:, 1] - boxes[:, 3] / 2,  # ymin
+        boxes[:, 0] + boxes[:, 2] / 2,  # xmax
+        boxes[:, 1] + boxes[:, 3] / 2,  # ymax
+    ], dim=1)
+
+def convert_targets_to_xywh(targets):
+    """
+    Convert bounding box targets from [xmin, ymin, xmax, ymax] format to [x, y, w, h] format.
+    """
+    for target in targets:
+        target["boxes"] = xyxy_to_xywh(target["boxes"])
+    return targets
+
+def convert_predictions_to_xyxy(predictions):
+    """
+    Convert bounding box predictions from [x, y, w, h] format to [xmin, ymin, xmax, ymax] format.
+    """
+    for prediction in predictions:
+        prediction["boxes"] = xywh_to_xyxy(prediction["boxes"])
+    return predictions
+
 def normalize(train_set):
     """
     check the mean and std of the training set (use before normalizing the images)
