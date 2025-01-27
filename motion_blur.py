@@ -337,7 +337,7 @@ def test_motion_blur(image_path='./images/img-290.jpg', results_path='', save_re
         return -1
 
     # Define figure and axes and set the figure position and size
-    fig, axes = plt.subplots(3,3, figsize=(10,15))
+    fig, axes = plt.subplots(3,3, figsize=(15,15))
     fig.suptitle("Motion Blur Noise Variations", fontsize=16, weight='bold')
     #manager = plt.get_current_fig_manager()
     #manager.window.setGeometry(100, 100, 1200, 800)
@@ -365,15 +365,21 @@ def test_motion_blur(image_path='./images/img-290.jpg', results_path='', save_re
 
     # Adjust layout
     #plt.tight_layout(rect=[0, 0, 1, 0.95])
-    global i
-    #plt.tight_layout()
+
     if save_results:
-        plt.savefig(os.path.join('./', f'res_{i}.png'), dpi=3000) #, bbox_inches='tight')
+        # Ensure results path exists
+        if not os.path.exists(results_path):
+            os.makedirs(results_path)
+        save_path = os.path.join(results_path, 'motion_blur_variations.png')
+        plt.savefig(save_path, dpi=300)
+        print(f"Figure saved to: {save_path}")
+
     plt.show()
+    plt.close(fig)  # Free up memory
 
 
-i = 1
+i = 2
 # This ensures the main function (main block) will not run when motion_blur.py is imported
 # If this file is imported then its name is *not* __main__, because it's not the main entry point, so the main() function won't be called
 if __name__ == "__main__":
-    test_motion_blur('./data/chitholian_annotated_potholes_dataset/images/img-290.jpg', save_results=True)
+    test_motion_blur('./data/chitholian_annotated_potholes_dataset/images/img-290.jpg', results_path='./plots', save_results=True)

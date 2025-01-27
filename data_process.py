@@ -216,10 +216,15 @@ class NoisySubset(PotholeDetectionDataset):
     def __getitem__(self, idx):
         return self.noisy_images[idx], self.original_subset[idx][1]  # Noisy image and target
 
-
-# custom collate_fn for torch DataLoader
 def collate_fn(batch):
-    return tuple(zip(*batch))
+    images = []
+    targets = []
+    for img, target in batch:
+        images.append(img)
+        targets.append(target)
+    # Stack images into a single tensor
+    images = torch.stack(images)
+    return images, targets
 
 def xyxy_to_xywh(boxes):
     """

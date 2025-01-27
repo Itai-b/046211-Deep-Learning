@@ -10,6 +10,8 @@ import torchvision.models as models
 from torchmetrics.detection import MeanAveragePrecision
 import matplotlib.pyplot as plt
 import numpy as np
+from kornia import augmentation as K
+from kornia.augmentation import AugmentationSequential
 import optuna
 from tqdm import tqdm
 import functools
@@ -28,8 +30,17 @@ op_train_set = None
 op_val_set = None
 save_path = None
 
-def train(model, train_loader, val_loader, optimizer, lr_scheduler, num_epochs=10, device="cuda", model_name="", save_path=None, trial=None):
-    global model_name_global
+# define a sequence of augmentations
+aug_list = AugmentationSequential(
+    # K.ColorJitter(0.1, 0.1, 0.1, 0.1, p=1.0),
+    # K.RandomAffine(360, [0.1, 0.1], [0.7, 1.2], [30., 50.], p=1.0),
+    # K.RandomPerspective(0.5, p=1.0),
+    K.RandomMotionBlur(kernel_size=(3, 51), angle=(-180.0, 180.0), direction=(-1.0, 1.0), p=0.3),  # Random motion blur
+    same_on_batch=False,
+)
+
+def train(model, train_loader, val_loader, optimizer, lr_scheduler, num_epochs=10, device="cuda", model_name="", save_path=None, trial=None, kornia_aug=False):
+    global model_name_global, aug_list
     
     model.to(device)
     
@@ -53,11 +64,18 @@ def train(model, train_loader, val_loader, optimizer, lr_scheduler, num_epochs=1
         model.train()
         epoch_loss = 0
         for images, targets in train_loader:
-            images = [img.to(device) for img in images]
+            images = images.to(device)
             targets_to_device = [
                 {'boxes': target['boxes'].to(device), 'labels': target['labels'].to(device)}
                 for target in targets
             ]
+            
+            if kornia_aug is True:
+                # apply augmentations  
+                images = aug_list(images)
+            
+            # Convert back to list of tensors as expected by the model
+            images = [img for img in images]
             
             loss_dict = model(images, targets_to_device)
             losses = sum(loss for loss in loss_dict.values())
@@ -135,7 +153,7 @@ def train(model, train_loader, val_loader, optimizer, lr_scheduler, num_epochs=1
     
     return history
     
-def train_from_config(model_config_path, train_set, val_set, save_path="data/models"):
+def train_from_config(model_config_path, train_set, val_set, save_path="data/models", kornia_aug=False):
     with open(model_config_path, 'r') as f:
         model_config = json.load(f)
     
@@ -191,7 +209,7 @@ def train_from_config(model_config_path, train_set, val_set, save_path="data/mod
     print(f"Starting training for {model_name} with the following parameters:")
     print(params)
     
-    history = train(model, train_loader, val_loader, optimizer, scheduler, params['epochs'], device=device, model_name=model_name, save_path=save_path)
+    history = train(model, train_loader, val_loader, optimizer, scheduler, params['epochs'], device=device, model_name=model_name, save_path=save_path, kornia_aug=kornia_aug)
     
     return history
 
