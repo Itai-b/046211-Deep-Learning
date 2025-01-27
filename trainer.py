@@ -129,7 +129,8 @@ def train(model, train_loader, val_loader, optimizer, lr_scheduler, num_epochs=1
         "fps": np.average(fps_list),
         "train_time": train_time,
         "model_parameters": model_parameters,
-        "model_size": model_size
+        "model_size": model_size,
+        "test_map": 0.0 # Placeholder for test mAP, to be calculated later
     }
     
     return history

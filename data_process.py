@@ -11,6 +11,7 @@ import torchvision
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 import kagglehub as kh
+import motion_blur
 
 # Set random seed for reproducibility
 seed = 211
@@ -191,7 +192,31 @@ class PotholeDetectionDataset:
             "area": torch.tensor([(xmax - xmin) * (ymax - ymin) for xmin, ymin, xmax, ymax in boxes], dtype=torch.float32),
         }
         return img, target
-    
+
+# TODO change
+class NoisySubset(PotholeDetectionDataset):
+    def __init__(self, original_subset, noise_fn, noise_params=None):
+        self.original_subset = original_subset
+        self.noise_fn = noise_fn
+        self.noise_params = noise_params or {}
+        self.noisy_images = []
+        
+        # Precompute noisy images
+        for idx in range(len(original_subset)):
+            img, target = original_subset[idx]
+
+            # Apply noise
+            noisy_img = self.noise_fn(image=img, **self.noise_params)
+
+            self.noisy_images.append(noisy_img)
+
+    def __len__(self):
+        return len(self.original_subset)
+
+    def __getitem__(self, idx):
+        return self.noisy_images[idx], self.original_subset[idx][1]  # Noisy image and target
+
+
 # custom collate_fn for torch DataLoader
 def collate_fn(batch):
     return tuple(zip(*batch))
@@ -353,10 +378,10 @@ def visualize_predictions(images, targets, all_predictions, threshold=0.5, show_
         img_np = convert_to_imshow_format(img, train_mean, train_std)
         img_np = np.ascontiguousarray(img_np)  # Ensure compatibility with OpenCV
         
-        # Draw ground truth boxes (red)
+        # Draw ground truth boxes (green)
         for box in target["boxes"]:
-            cv2.rectangle(img_np, (int(box[0]), int(box[1])), (int(box[2]), int(box[3])), (255, 0, 0), 1)
-            cv2.putText(img_np, "GT", (int(box[0]), int(box[1] - 5)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1)
+            cv2.rectangle(img_np, (int(box[0]), int(box[1])), (int(box[2]), int(box[3])), (0, 255, 0), 2)
+            cv2.putText(img_np, "GT", (int(box[0]), int(box[1] - 5)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
         
         # Access predictions for the specific image_id
         predictions = all_predictions.get(target['image_id'].item(), {})
@@ -365,21 +390,21 @@ def visualize_predictions(images, targets, all_predictions, threshold=0.5, show_
                 if score < threshold:
                     continue
                 xmin, ymin, xmax, ymax = map(int, box)
-                cv2.rectangle(img_np, (xmin, ymin), (xmax, ymax), (0, 255, 0), 1)
+                cv2.rectangle(img_np, (xmin, ymin), (xmax, ymax), (255, 0, 0), 2)
                 if show_severity:
                     cv2.putText(img_np, 
                                 f"P: {get_label_name(label)}: {score:.2f}", 
                                 (xmin, ymin - 10), 
                                 cv2.FONT_HERSHEY_SIMPLEX, 
                                 0.5, 
-                                (0, 255, 0), 2)  # Green text, thickness=2
+                                (255, 0, 0), 2)  # Red text, thickness=2
                 else:
                     cv2.putText(img_np, 
                                 f"P: {score:.2f}", 
                                 (xmin, ymax + 5), 
                                 cv2.FONT_HERSHEY_SIMPLEX, 
                                 0.5, 
-                                (0, 255, 0), 1)
+                                (255, 0, 0), 2)
         
         # Display the image with annotations
         axs[i].imshow(img_np)
@@ -391,3 +416,6 @@ def visualize_predictions(images, targets, all_predictions, threshold=0.5, show_
 
     plt.tight_layout()
     plt.show()
+
+    
+    

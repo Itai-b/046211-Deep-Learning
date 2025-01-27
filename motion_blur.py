@@ -80,6 +80,7 @@ def apply_uniform_motion_blur(image, amplitude=0.5):
     return blurred_image, kernel
 
 
+# TODO: remove 'half' kernels or let half kernels have double the kernel size (for amplitude equality)
 def ellipse_kernel(kernel_size=50, thickness=0, angle=42, mode='full'):
     """
     Generates an ellipse-shaped point spread function (PSF) as a kernel for motion blur.
@@ -159,7 +160,9 @@ def apply_ellipse_motion_blur(image, amplitude=0.5):
 
     # Randomize mode (full / half kernel)
     mode = rnd.choices(population=['full','half_right','half_left'],weights=[0.5, 0.25,0.25])[0]
-
+    if mode != 'full':
+        size *= 2
+    
     # Apply kernel on image
     kernel = ellipse_kernel(kernel_size=size, thickness=thickness, angle=angle, mode=mode)
     # blurred_image = cv2.filter2D(image, -1, kernel)
@@ -316,12 +319,12 @@ def test():
     plt.show()
 
 
-def main():
+def test_motion_blur(image_path='./images/img-290.jpg', results_path='', save_results=False):
     """
     Take one image (img-290.jpg) and plot it in 9 variations (3 for each noise)
     """
     # Constants
-    image_path= './images/img-290.jpg'
+    #image_path= './images/img-290.jpg'
     kernel_types = ['natural', 'uniform', 'ellipse']
 
     # Set different noise amplitude values for demonstration
@@ -364,12 +367,13 @@ def main():
     #plt.tight_layout(rect=[0, 0, 1, 0.95])
     global i
     #plt.tight_layout()
-    plt.savefig(os.path.join('./results/', f'res_{i}.png'), dpi=3000) #, bbox_inches='tight')
+    if save_results:
+        plt.savefig(os.path.join('./', f'res_{i}.png'), dpi=3000) #, bbox_inches='tight')
     plt.show()
 
 
-i = 2
+i = 1
 # This ensures the main function (main block) will not run when motion_blur.py is imported
 # If this file is imported then its name is *not* __main__, because it's not the main entry point, so the main() function won't be called
 if __name__ == "__main__":
-    main()
+    test_motion_blur('./data/chitholian_annotated_potholes_dataset/images/img-290.jpg', save_results=True)
