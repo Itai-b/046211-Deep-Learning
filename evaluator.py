@@ -60,7 +60,7 @@ def evaluate_model(model, data_loader, threshold=0.5, num_iterations=1, batch_si
     results=metric.compute()
     return all_predictions, results, fps
 
-def test_model(model, test_set, index=None, model_name=None, history=None, show_batch=True):
+def test_model(model, test_set, index=None, title=None, history=None, show_batch=True):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)  # Move the model to the GPU
     model.eval()  # Set the model to evaluation mode
@@ -82,8 +82,8 @@ def test_model(model, test_set, index=None, model_name=None, history=None, show_
     batches = list(test_loader)
     images, targets = batches[index]
 
-    if model_name is not None:
-        title = f"{model_name} Test Batch #{index+1}"
+    if title is not None:
+        title = f"{title} Test Batch #{index+1}"
     else:
         title = f"Test Batch #{index+1}"
     
