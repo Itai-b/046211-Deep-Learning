@@ -1,0 +1,1 @@
+{"model_name": "fcos_resnet50_fpn", "best_trial": 25, "best_val_map": 0.6669365763664246, "params": {"batch_size": 4, "epochs": 14, "preweight_mode": "fine_tuning", "optimizer": "Adam", "lr": 0.00017706784246894727, "beta1": 0.9634396789345582, "beta2": 0.9177747811929413, "scheduler": "OneCycleLR", "max_lr": 0.0018099558447350662}}

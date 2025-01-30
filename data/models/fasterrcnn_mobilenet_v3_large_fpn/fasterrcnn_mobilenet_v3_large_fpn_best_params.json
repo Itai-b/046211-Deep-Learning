@@ -1,0 +1,1 @@
+{"model_name": "fasterrcnn_mobilenet_v3_large_fpn", "best_trial": 91, "best_val_map": 0.6765016913414001, "params": {"batch_size": 6, "epochs": 17, "preweight_mode": "fine_tuning", "optimizer": "SGD", "lr": 0.005562807003835387, "momentum": 0.9328567236871179, "weight_decay": 7.349985786517183e-05, "scheduler": "ReduceLROnPlateau", "factor": 0.3997437126341112, "patience": 4}}

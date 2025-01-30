@@ -1,2 +1,0 @@
-DATA: https://cs.brown.edu/people/lbsun/deblur2013/all_deblurred_results_SunICCP2013.zip
-ORIGINAL PAPER: https://ieeexplore.ieee.org/document/5206815

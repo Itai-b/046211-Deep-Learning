@@ -2,6 +2,9 @@ import os
 import json
 import shutil
 import xmltodict
+import cv2
+import numpy as np
+import motion_blur
 
 def calc_model_size(model):
     num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -149,6 +152,65 @@ def organize_split_from_json(json_path, base_dir="data", output_dir="splitted_da
     print(f"  val/images, val/annotations, val/labels")
     print(f"  test/images, test/annotations, test/labels")
 
+def ensure_directory_clean(path):
+    """Ensure the directory is clean by removing it if it exists and recreating it."""
+    if os.path.exists(path):
+        shutil.rmtree(path)
+    os.makedirs(path)
+
+def copy_labels(source_label_dir, target_label_dir):
+    """Copy all label files from source to target."""
+    ensure_directory_clean(target_label_dir)
+    for filename in os.listdir(source_label_dir):
+        if filename.lower().endswith(('.txt', '.xml')):  # Adjust extensions if needed
+            source_path = os.path.join(source_label_dir, filename)
+            target_path = os.path.join(target_label_dir, filename)
+            shutil.copyfile(source_path, target_path)
+
+def noise_test(source_dir, target_dir, kernel_type, amp=0):
+    """Apply noise, save blurred images, and copy corresponding labels."""
+    
+    source_image_dir = os.path.join(source_dir, 'images')
+    source_label_dir = os.path.join(source_dir, 'labels')
+    source_annot_dir = os.path.join(source_dir, 'annotations')
+    target_image_dir = os.path.join(target_dir, 'images')
+    target_label_dir = os.path.join(target_dir, 'labels')
+    target_annot_dir = os.path.join(target_dir, 'annotations')
+    
+    #create target directories
+    os.makedirs(target_image_dir, exist_ok=True)
+    os.makedirs(target_label_dir, exist_ok=True)
+    os.makedirs(target_annot_dir, exist_ok=True)
+    
+    for filename in os.listdir(source_image_dir):
+        if filename.lower().endswith(('.png', '.jpg')):
+            image_path = os.path.join(source_image_dir, filename)
+            image = cv2.imread(image_path)
+            if image is not None:
+                blurred_image = motion_blur.motion_blur(image, kernel_type=kernel_type, a=amp)
+                output_path = os.path.join(target_image_dir, filename)
+                cv2.imwrite(output_path, blurred_image)
+            else:
+                print(f"Failed to load image: {filename}")
+
+    # Copy corresponding labels
+    copy_labels(source_label_dir, target_label_dir)
+    copy_labels(source_annot_dir, target_annot_dir)
+    
+def add_noise_to_test(data_dir):
+    """
+    Add different motion blur noise to the test set.
+    """
+    test_dir = os.path.join(data_dir, 'test')
+    # Run tests
+    noise_test(test_dir, os.path.join(data_dir, 'test_nat'), kernel_type='natural')
+    noise_test(test_dir, os.path.join(data_dir, 'test_eli001'), kernel_type='ellipse', amp=0.01)
+    noise_test(test_dir, os.path.join(data_dir, 'test_eli005'), kernel_type='ellipse', amp=0.05)
+    noise_test(test_dir, os.path.join(data_dir, 'test_eli01'), kernel_type='ellipse', amp=0.1)
+    noise_test(test_dir, os.path.join(data_dir, 'test_uni001'), kernel_type='uniform', amp=0.01)
+    noise_test(test_dir, os.path.join(data_dir, 'test_uni005'), kernel_type='uniform', amp=0.05)
+    noise_test(test_dir, os.path.join(data_dir, 'test_uni01'), kernel_type='uniform', amp=0.1)
+
 
 if __name__ == "__main__":
     voc_to_yolo(
@@ -158,6 +220,6 @@ if __name__ == "__main__":
     organize_split_from_json(
         json_path='./data/chitholian_annotated_potholes_dataset/our_split.json',
         base_dir='./data/chitholian_annotated_potholes_dataset/',
-        output_dir='./splitted_data/'
+        output_dir='./data/potholes_dataset'
     )
 

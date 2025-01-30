@@ -1,0 +1,1 @@
+{"model_name": "ssdlite320_mobilenet_v3_large", "best_trial": 0, "best_val_map": 0.5111747980117798, "params": {"batch_size": 7, "epochs": 17, "preweight_mode": "fine_tuning", "optimizer": "Adam", "lr": 0.0009472961959721175, "beta1": 0.9658118084445251, "beta2": 0.9318563294010559, "scheduler": "CosineAnnealingLR", "T_max": 8, "eta_min": 8.307341815284441e-06}}

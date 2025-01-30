@@ -2,6 +2,7 @@ import os
 import shutil
 import xmltodict
 import numpy as np
+import json
 import re
 from enum import Enum
 import cv2
@@ -11,7 +12,7 @@ import torchvision
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 import kagglehub as kh
-import motion_blur
+import utils
 
 # Set random seed for reproducibility
 seed = 211
@@ -58,8 +59,57 @@ def download_data():
             os.rmdir(annotated_images_dir)
     else:
         print('Data already exists\n')
-        
-        
+
+def data_preprocessing(input_size=640):
+    """
+    Download the data, split it into train, validation, and test sets, and resize the images.
+    Then add yolo appropriate annotations and add motion blur noise to the test set (natural, uniform and ellipse noise with different amplitudes).
+    """
+    download_data()
+    
+    transform = torchvision.transforms.Compose([
+        torchvision.transforms.Resize((input_size, input_size)),
+        torchvision.transforms.ToTensor(), # uint8 values in [0, 255] -> float tensor with values [0, 1]
+    ])
+    # Initialize the dataset
+    dataset = PotholeDetectionDataset(img_dir, ann_dir, transform=transform)
+    
+    # Split the dataset to train, validation, and test sets (70-10-20)
+
+    # Maintain the original indices while splitting
+    train_indices, test_indices = train_test_split(range(len(dataset)), test_size=0.2, random_state=seed)
+    train_indices, val_indices = train_test_split(train_indices, test_size=0.125, random_state=seed)
+
+    train_set = Subset(dataset, train_indices)
+    val_set = Subset(dataset, val_indices)
+    test_set = Subset(dataset, test_indices)
+
+    print(f"Train set size: {len(train_set)} - {len(train_set)/len(dataset)*100:.2f}%")
+    print(f"Validation set size: {len(val_set)} - {len(val_set)/len(dataset)*100:.2f}%")
+    print(f"Test set size: {len(test_set)} - {len(test_set)/len(dataset)*100:.2f}%\n")
+    
+    # Save train, val, and test indices to JSON:
+    split_data = {
+        "train": train_set.indices,
+        "val": val_set.indices,
+        "test": test_set.indices
+    }
+    
+    with open('./data/chitholian_annotated_potholes_dataset/our_split.json', "w") as file:
+        json.dump(split_data, file, indent=4)
+    
+    utils.voc_to_yolo(
+        voc_path='data/chitholian_annotated_potholes_dataset/annotations',
+        yolo_path='data/chitholian_annotated_potholes_dataset/yolo_labels'
+    )
+    utils.organize_split_from_json(
+        json_path='./data/chitholian_annotated_potholes_dataset/our_split.json',
+        base_dir='./data/chitholian_annotated_potholes_dataset/',
+        output_dir='./data/potholes_dataset/'
+    )
+    
+    utils.add_noise_to_test(data_dir='./data/potholes_dataset/')  
+
 class PotholeSeverity(Enum):
     """
     Enum class for the severity of potholes.
@@ -193,7 +243,6 @@ class PotholeDetectionDataset:
         }
         return img, target
 
-# TODO change
 class NoisySubset(PotholeDetectionDataset):
     def __init__(self, original_subset, noise_fn, noise_params=None):
         self.original_subset = original_subset
@@ -225,28 +274,6 @@ def collate_fn(batch):
     # Stack images into a single tensor
     images = torch.stack(images)
     return images, targets
-
-def xyxy_to_xywh(boxes):
-    """
-    Given a list of bounding boxes in [xmin, ymin, xmax, ymax] format, convert them to [x, y, w, h] format.
-    """
-    return torch.stack([
-        (boxes[:, 0] + boxes[:, 2]) / 2,  # x center
-        (boxes[:, 1] + boxes[:, 3]) / 2,  # y center
-        boxes[:, 2] - boxes[:, 0],  # width
-        boxes[:, 3] - boxes[:, 1],  # height
-    ], dim=1)
-    
-def xywh_to_xyxy(boxes):
-    """
-    Given a list of bounding boxes in [x, y, w, h] format, convert them to [xmin, ymin, xmax, ymax] format.
-    """
-    return torch.stack([
-        boxes[:, 0] - boxes[:, 2] / 2,  # xmin
-        boxes[:, 1] - boxes[:, 3] / 2,  # ymin
-        boxes[:, 0] + boxes[:, 2] / 2,  # xmax
-        boxes[:, 1] + boxes[:, 3] / 2,  # ymax
-    ], dim=1)
 
 def convert_targets_to_xywh(targets):
     """
@@ -422,5 +449,9 @@ def visualize_predictions(images, targets, all_predictions, threshold=0.5, show_
     plt.tight_layout()
     plt.show()
 
-    
+if __name__ == "__main__":
+    if not os.path.exists('data/potholes_dataset'):
+        data_preprocessing()  
+    else:
+        print('Data already was proccesed\n')
     

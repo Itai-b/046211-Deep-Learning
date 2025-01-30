@@ -1,0 +1,15 @@
+train: ./data/potholes_dataset/train/images/
+val: ./data/potholes_dataset/val/images/
+test: ./data/potholes_dataset/test/images/
+
+## Noisy datasets (not for train!)
+noisy_test_nat: ./data/potholes_dataset/test_nat/images/
+noisy_test_eli001: ./data/potholes_dataset/test_eli001/images/
+noisy_test_eli005: ./data/potholes_dataset/test_eli005/images/
+noisy_test_eli01: ./data/potholes_dataset/test_eli01/images/
+noisy_test_uni001: ./data/potholes_dataset/test_uni001/images/
+noisy_test_uni005: ./data/potholes_dataset/test_uni005/images/
+noisy_test_uni01: ./data/potholes_dataset/test_uni01/images/
+
+nc: 1  # number of classes
+names: ['pothole']

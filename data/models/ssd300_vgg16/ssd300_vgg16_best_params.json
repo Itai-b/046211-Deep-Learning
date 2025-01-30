@@ -1,0 +1,1 @@
+{"model_name": "ssd300_vgg16", "best_trial": 75, "best_val_map": 0.6289039254188538, "params": {"batch_size": 5, "epochs": 20, "preweight_mode": "fine_tuning", "optimizer": "Adam", "lr": 0.0003013278858654, "beta1": 0.889465602367927, "beta2": 0.9647690578247308, "scheduler": "OneCycleLR", "max_lr": 0.00217740134478874}}

@@ -32,9 +32,9 @@ save_path = None
 
 # define a sequence of augmentations
 aug_list = AugmentationSequential(
-    # K.ColorJitter(0.1, 0.1, 0.1, 0.1, p=1.0),
-    # K.RandomAffine(360, [0.1, 0.1], [0.7, 1.2], [30., 50.], p=1.0),
-    # K.RandomPerspective(0.5, p=1.0),
+    K.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1, hue=0.05, p=0.2),
+    K.RandomGaussianNoise(mean=0.0, std=0.02, p=0.2), 
+    K.RandomGaussianBlur(kernel_size=(3, 3), sigma=(0.1, 0.5), p=0.2),          
     K.RandomMotionBlur(kernel_size=(3, 51), angle=(-180.0, 180.0), direction=(-1.0, 1.0), p=0.3),  # Random motion blur
     same_on_batch=False,
 )
@@ -163,6 +163,7 @@ def train_from_config(model_config_path, train_set, val_set, save_path="data/mod
     train_loader = DataLoader(
         train_set,
         batch_size=params["batch_size"],
+        num_workers=4,
         shuffle=True,
         collate_fn=data_process.collate_fn
     )
@@ -170,6 +171,7 @@ def train_from_config(model_config_path, train_set, val_set, save_path="data/mod
     val_loader = DataLoader(
         val_set,
         batch_size=params["batch_size"],
+        num_workers=2,
         shuffle=False,
         collate_fn=data_process.collate_fn
     )
