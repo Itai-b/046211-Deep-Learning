@@ -18,7 +18,7 @@ def calc_model_size(model):
     
     return num_params, model_size_mb
 
-def update_json(history, model_name, json_name="models_data.json", save_path=""):
+def update_json(history, model_name, json_name="models_data.json", save_path="./"):
     # Construct the full path to the JSON file
     json_path = os.path.join(save_path, json_name)
     

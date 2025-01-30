@@ -173,7 +173,7 @@ def apply_ellipse_motion_blur(image, amplitude=0.5):
     return blurred_image, kernel
 
 
-def apply_camera_shake_blur(image, kernel_path='./motion_blur_kernels'):
+def apply_camera_shake_blur(image, kernel_path='./data/motion_blur_data'):
     """
     Applies a randomly selected naturally recorded camera shake blur kernel to an RGB image.
 

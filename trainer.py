@@ -31,11 +31,8 @@ op_val_set = None
 save_path = None
 
 # define a sequence of augmentations
-aug_list = AugmentationSequential(
-    K.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1, hue=0.05, p=0.2),
-    K.RandomGaussianNoise(mean=0.0, std=0.02, p=0.2), 
-    K.RandomGaussianBlur(kernel_size=(3, 3), sigma=(0.1, 0.5), p=0.2),          
-    K.RandomMotionBlur(kernel_size=(3, 51), angle=(-180.0, 180.0), direction=(-1.0, 1.0), p=0.3),  # Random motion blur
+aug_list = AugmentationSequential(      
+    K.RandomMotionBlur(kernel_size=(3, 51), angle=(-180.0, 180.0), direction=(-1.0, 1.0), p=0.4),  # Random motion blur
     same_on_batch=False,
 )
 
@@ -132,6 +129,8 @@ def train(model, train_loader, val_loader, optimizer, lr_scheduler, num_epochs=1
     if trial is not None:
         # Save the best trained model:
         torch.save(best_model_state_dict, os.path.join(save_path, f"{model_name_global}_{trial.number}_best.pth"))
+    elif kornia_aug is True:
+        torch.save(best_model_state_dict, os.path.join(save_path, f"{model_name}_aug_best.pth"))
     else:
         torch.save(best_model_state_dict, os.path.join(save_path, f"{model_name}_best.pth"))
     
@@ -148,7 +147,6 @@ def train(model, train_loader, val_loader, optimizer, lr_scheduler, num_epochs=1
         "train_time": train_time,
         "model_parameters": model_parameters,
         "model_size": model_size,
-        "test_map": 0.0 # Placeholder for test mAP, to be calculated later
     }
     
     return history
@@ -163,7 +161,6 @@ def train_from_config(model_config_path, train_set, val_set, save_path="data/mod
     train_loader = DataLoader(
         train_set,
         batch_size=params["batch_size"],
-        num_workers=4,
         shuffle=True,
         collate_fn=data_process.collate_fn
     )
@@ -171,7 +168,6 @@ def train_from_config(model_config_path, train_set, val_set, save_path="data/mod
     val_loader = DataLoader(
         val_set,
         batch_size=params["batch_size"],
-        num_workers=2,
         shuffle=False,
         collate_fn=data_process.collate_fn
     )

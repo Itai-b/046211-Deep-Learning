@@ -1,3 +1,4 @@
+import os
 import random
 import torch
 from torch.utils.data import DataLoader
@@ -83,15 +84,14 @@ def test_model(model, test_set, index=None, title=None, history=None, show_batch
     images, targets = batches[index]
 
     if title is not None:
-        title = f"{title} Test Batch #{index+1}"
+        title = f"{title} Test Batch #{index}"
     else:
-        title = f"Test Batch #{index+1}"
+        title = f"Test Batch #{index}"
     
     # Visualize the predictions on the selected batch
     if show_batch:
         data_process.visualize_predictions(images, targets, predictions, threshold=0.5, show_severity=False, title=title)
-    
-    if history is not None:
-        history['test_map'] = mean_ap_50
         
-    return history
+    return mean_ap_50
+    
+

@@ -60,7 +60,7 @@ def download_data():
     else:
         print('Data already exists\n')
 
-def data_preprocessing(input_size=640):
+def data_preprocessing():
     """
     Download the data, split it into train, validation, and test sets, and resize the images.
     Then add yolo appropriate annotations and add motion blur noise to the test set (natural, uniform and ellipse noise with different amplitudes).
@@ -68,7 +68,6 @@ def data_preprocessing(input_size=640):
     download_data()
     
     transform = torchvision.transforms.Compose([
-        torchvision.transforms.Resize((input_size, input_size)),
         torchvision.transforms.ToTensor(), # uint8 values in [0, 255] -> float tensor with values [0, 1]
     ])
     # Initialize the dataset
@@ -275,22 +274,6 @@ def collate_fn(batch):
     images = torch.stack(images)
     return images, targets
 
-def convert_targets_to_xywh(targets):
-    """
-    Convert bounding box targets from [xmin, ymin, xmax, ymax] format to [x, y, w, h] format.
-    """
-    for target in targets:
-        target["boxes"] = xyxy_to_xywh(target["boxes"])
-    return targets
-
-def convert_predictions_to_xyxy(predictions):
-    """
-    Convert bounding box predictions from [x, y, w, h] format to [xmin, ymin, xmax, ymax] format.
-    """
-    for prediction in predictions:
-        prediction["boxes"] = xywh_to_xyxy(prediction["boxes"])
-    return predictions
-
 def normalize(train_set):
     """
     check the mean and std of the training set (use before normalizing the images)
@@ -380,14 +363,14 @@ def show_images(images, targets, title=""):
             cv2.rectangle(img_np,
                         (int(box[0]), int(box[1])),
                         (int(box[2]), int(box[3])),
-                        (255, 0, 0), 1)  # Red box with thickness 2
+                        (255, 0, 0), 2)  
             # label_name = get_label_name(label.item())
             # cv2.putText(img_np,
             #             label_name,
             #             (int(box[0]), int(box[1] - 5)),
             #             cv2.FONT_HERSHEY_SIMPLEX,
             #             0.5,
-            #             (255, 0, 0), 1)  # Red text
+            #             (255, 0, 0), 2)  # Red text
         
         # Display the image
         axes[idx].imshow(img_np)
