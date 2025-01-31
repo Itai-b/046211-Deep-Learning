@@ -7,3 +7,4 @@ data/chitholian_annotated_potholes_dataset
 data/potholes_dataset
 data/models/yolov8/yolov8*
 __pycache__/*
+*.pth
