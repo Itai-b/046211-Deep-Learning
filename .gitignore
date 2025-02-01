@@ -8,3 +8,4 @@ data/potholes_dataset
 data/models/yolov8/yolov8*
 __pycache__/*
 *.pth
+*.pt
