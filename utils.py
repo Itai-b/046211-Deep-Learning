@@ -295,7 +295,7 @@ def display_results_table(with_augmentations=False):
     """))
 
     # Load JSON data
-    with open("models_data copy.json", "r") as f:
+    with open("models_data.json", "r") as f:
         data = json.load(f)
         
     # Filter models based on the "_aug" condition
