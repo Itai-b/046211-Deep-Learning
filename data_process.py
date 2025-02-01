@@ -3,6 +3,7 @@ import shutil
 import xmltodict
 import numpy as np
 import json
+import yaml
 import re
 from enum import Enum
 import cv2
@@ -31,6 +32,43 @@ train_std = torch.tensor([0.1826, 0.1745, 0.1723])
 # Data directories
 img_dir = 'data/chitholian_annotated_potholes_dataset/images'
 ann_dir = 'data/chitholian_annotated_potholes_dataset/annotations'
+
+def create_yolo_yaml(base_path):
+    """
+    Create a yolo.yaml file with absolute paths.
+    """
+    # Define paths for train, val, and test sets
+    paths = {
+        'train': os.path.abspath(os.path.join(base_path, 'train/images/')),
+        'val': os.path.abspath(os.path.join(base_path, 'val/images/')),
+        'test': os.path.abspath(os.path.join(base_path, 'test/images/')),
+        'noisy_test_nat': os.path.abspath(os.path.join(base_path, 'test_nat/images/')),
+        'noisy_test_eli001': os.path.abspath(os.path.join(base_path, 'test_eli001/images/')),
+        'noisy_test_eli005': os.path.abspath(os.path.join(base_path, 'test_eli005/images/')),
+        'noisy_test_eli01': os.path.abspath(os.path.join(base_path, 'test_eli01/images/')),
+        'noisy_test_uni001': os.path.abspath(os.path.join(base_path, 'test_uni001/images/')),
+        'noisy_test_uni005': os.path.abspath(os.path.join(base_path, 'test_uni005/images/')),
+        'noisy_test_uni01': os.path.abspath(os.path.join(base_path, 'test_uni01/images/'))
+    }
+
+    yaml_content = {
+        'train': paths['train'],
+        'val': paths['val'],
+        'test': paths['test'],
+        'noisy_test_nat': paths['noisy_test_nat'],
+        'noisy_test_eli001': paths['noisy_test_eli001'],
+        'noisy_test_eli005': paths['noisy_test_eli005'],
+        'noisy_test_eli01': paths['noisy_test_eli01'],
+        'noisy_test_uni001': paths['noisy_test_uni001'],
+        'noisy_test_uni005': paths['noisy_test_uni005'],
+        'noisy_test_uni01': paths['noisy_test_uni01'],
+        'nc': 1,  # number of classes
+        'names': ['pothole']
+    }
+
+    # Write to yolo.yaml
+    with open(os.path.join(base_path, 'yolo.yaml'), 'w') as yaml_file:
+        yaml.dump(yaml_content, yaml_file, default_flow_style=False)
 
 def download_data():
     """
@@ -107,7 +145,10 @@ def data_preprocessing():
         output_dir='./data/potholes_dataset/'
     )
     
-    utils.add_noise_to_test(data_dir='./data/potholes_dataset/')  
+    utils.add_noise_to_test(data_dir='./data/potholes_dataset/') 
+    
+    # Create YOLO YAML file with absolute paths
+    create_yolo_yaml(base_path='./data/potholes_dataset/')
 
 class PotholeSeverity(Enum):
     """
@@ -303,7 +344,7 @@ def normalize(train_set):
     print(f"Training Set Mean: {train_mean}")
     print(f"Training Set Std: {train_std}\n")
 
-def load_data(transform, input_size=300):
+def load_data(transform, input_size=300, img_dir=img_dir, ann_dir=ann_dir):
     """
     Using the PotholeDetectionDataset class, and relevant transformation.
     Split the data into train, validation, and test sets.
@@ -431,6 +472,26 @@ def visualize_predictions(images, targets, all_predictions, threshold=0.5, show_
 
     plt.tight_layout()
     plt.show()
+    
+def display_images_from_trainset():
+    """
+    Load and display a few random images from the train dataset.
+    """
+    download_data()
+
+    input_size = 300
+
+    transform = torchvision.transforms.Compose([
+        torchvision.transforms.Resize((input_size, input_size)),
+        torchvision.transforms.ToTensor(), # uint8 values in [0, 255] -> float tensor with values [0, 1]
+        torchvision.transforms.Normalize(mean=train_mean.tolist(), std=train_std.tolist())
+    ])
+
+    train_set, _, _ = load_data(transform=transform, input_size=input_size)
+    
+    train_loader = DataLoader(train_set, batch_size=5, shuffle=True, collate_fn=collate_fn)
+    images, targets = next(iter(train_loader))
+    show_images(images, targets, title="Random Images From The Training Set")
 
 if __name__ == "__main__":
     if not os.path.exists('data/potholes_dataset'):

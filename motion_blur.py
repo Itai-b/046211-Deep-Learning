@@ -185,7 +185,7 @@ def apply_camera_shake_blur(image, kernel_path='./data/motion_blur_data'):
        Motion blurred image and kernel (numpy.ndarray, numpy.ndarray).
     """
     # Get a list of all kernel files
-    kernel_files = [f for f in os.listdir(kernel_path) if f.endswith('.png')]
+    kernel_files = [f for f in os.listdir(kernel_path) if f.endswith('kernel.png')]
 
     if not kernel_files:
         raise FileNotFoundError(f"No kernel files found in {kernel_path}.")
@@ -211,7 +211,7 @@ def apply_camera_shake_blur(image, kernel_path='./data/motion_blur_data'):
     return image_filtered, kernel
 
 
-def motion_blur(image, kernel_type='uniform', a=0.2, return_kernel=False):
+def motion_blur(image, kernel_type='uniform', a=0.2, return_kernel=False, kernel_path='./data/motion_blur_data'):
     """
     Applies motion blur to an image using a generated PSF kernel.
 
@@ -237,7 +237,7 @@ def motion_blur(image, kernel_type='uniform', a=0.2, return_kernel=False):
     elif kernel_type == 'ellipse':
         blurred_image, kernel = apply_ellipse_motion_blur(image=image, amplitude=a)
     elif kernel_type == 'natural' or kernel_type == 'camera_shake':
-        blurred_image, kernel = apply_camera_shake_blur(image=image)
+        blurred_image, kernel = apply_camera_shake_blur(image=image, kernel_path=kernel_path)
     else:   # Invalid type, return original image with no kernel
         blurred_image, kernel = (image, np.zeros((1,1)))
 
