@@ -260,26 +260,26 @@ def plot_test_results(noise_type=None, show_augmentations=False):
     with open("models_data.json", "r") as f:
         data = json.load(f)
 
-    relevant_noises = ['uni001', 'uni005', 'uni01', 'eli001', 'eli005', 'eli01', 'nat']
+    relevant_noises = ['uni', 'eli', 'uni001', 'uni005', 'uni01', 'eli001', 'eli005', 'eli01', 'nat']
     if noise_type is not None and noise_type not in relevant_noises:
         raise ValueError(f"Invalid noise type. Choose from: {relevant_noises}")
     
     noise_name = ""
+    noise_amplitude = ""
     if noise_type is not None:
-        if noise_type == "uni001":
-            noise_name = "Uniform (0.01)"
-        elif noise_type == "uni005":
-            noise_name = "Uniform (0.05)"
-        elif noise_type == "uni01":
-            noise_name = "Uniform (0.1)"
-        elif noise_type == "eli001":
-            noise_name = "Ellipse (0.01)"
-        elif noise_type == "eli005":
-            noise_name = "Ellipse (0.05)"
-        elif noise_type == "eli01":
-            noise_name = "Ellipse (0.1)"
+        if noise_type.startswith("uni"):
+            noise_name = "Synthesized Uniform-Kernel Motion Blur Noise"
+            if noise_type in ['uni001', 'uni005', 'uni01']:
+                noise_amplitude = noise_type[4:]
+                noise_amplitude = f"0.{noise_amplitude}"
+        elif noise_type.startswith("eli"):
+            noise_name = "Synthesized Ellipse-Kernel Motion Blur Noise"
+            if noise_type in ['eli001', 'eli005', 'eli01']:
+                noise_amplitude = noise_type[4:]
+                noise_amplitude = f"0.{noise_amplitude}"
         elif noise_type == "nat":
-            noise_name = "Natural"
+            noise_name = "Natural Recorded Camera Shake Kernels"
+    
     
     # Filter out models that have "_aug" in their name
     filtered_models = {model: {"test_map50": model_data['test_map50'], "fps": model_data['fps'],
@@ -289,12 +289,6 @@ def plot_test_results(noise_type=None, show_augmentations=False):
                                "nat_map50": model_data['nat_map50']}
                         for model, model_data in data.items() if ("_aug" not in model or (show_augmentations))}
     
-    # If a noise type is specified, filter based on that noise's mAP results
-    if noise_type is not None:
-        if noise_type in relevant_noises:
-            filtered_models = {model: {"test_map50": model_data[f"{noise_type}_map50"], "fps": model_data['fps']}
-                               for model, model_data in filtered_models.items()}
-
     # Assign colors to models based on their base name (without "_aug")
     base_model_names = {}
 
@@ -306,23 +300,55 @@ def plot_test_results(noise_type=None, show_augmentations=False):
     # Generate a list of unique colors based on the base model names
     colors = plt.cm.get_cmap('tab10', len(base_model_names))
 
-    # Plot the scatter of mAP@50 vs fps for each model
-    plt.figure(figsize=(10, 6))
-    for model, model_data in filtered_models.items():
-        base_name = model.replace("_aug", "")
-        color = colors(base_model_names[base_name])  # Assign color based on base name
-        marker = 'v' if '_aug' in model else 'o'  # Use triangle for "_aug", dot for others
+    if noise_type is not None and noise_type in ['uni', 'eli']:
+        noise_levels = ["001", "005", "01"]
+        fig, axes = plt.subplots(1, 3, figsize=(18, 6), sharey=True)
         
-        plt.scatter(model_data['fps'], model_data['test_map50'], label=model, color=color, 
-                    marker=marker, s=100)
+        for i, level in enumerate(noise_levels):
+            noise_key = f"{noise_type}{level}"
+            for model, model_data in filtered_models.items():
+                base_name = model.replace("_aug", "")
+                color = colors(base_model_names[base_name])  # Assign color based on base name
+                marker = 'v' if '_aug' in model else 'o'  # Use triangle for "_aug", dot for others
+                
+                axes[i].scatter(model_data['fps'], model_data[f"{noise_key}_map50"], label=model, color=color, 
+                                marker=marker, s=100)
+            
+            # add a decimal point to the noise level after the first digit
+            if level == "001":
+                level = "0.01"
+            elif level == "005":
+                level = "0.05"
+            elif level == "01":
+                level = "0.1"
+            axes[i].set_title(f"a={level}", fontsize=14)
+            axes[i].set_xlabel("FPS", fontsize=12)
+            axes[i].grid(True)
+        
+        axes[0].set_ylabel("mAP@50", fontsize=12)
+        handles, labels = axes[0].get_legend_handles_labels()
+        fig.legend(handles, labels, title="Models", bbox_to_anchor=(1, 1), loc='upper left')
+        fig.suptitle(f"Benchmark on the Test Set with {noise_name}", fontsize=16)
+        plt.tight_layout()
+        plt.show()
+    else:
+        # Plot the scatter of mAP@50 vs fps for each model
+        plt.figure(figsize=(10, 6))
+        for model, model_data in filtered_models.items():
+            base_name = model.replace("_aug", "")
+            color = colors(base_model_names[base_name])  # Assign color based on base name
+            marker = 'v' if '_aug' in model else 'o'  # Use triangle for "_aug", dot for others
+            
+            plt.scatter(model_data['fps'], model_data['test_map50'], label=model, color=color, 
+                        marker=marker, s=100)
 
-    plt.title(f"Benchmark on the Test Set {' (with ' + noise_name + ' Motion Blur Noise)' if (noise_type is not None) else ''}", fontsize=14)
-    plt.xlabel("FPS", fontsize=12)
-    plt.ylabel("mAP@50", fontsize=12)
-    plt.legend(title="Models", bbox_to_anchor=(1.05, 1), loc='upper left')
-    plt.grid(True)
-    plt.tight_layout()
-    plt.show()
+        plt.title(f"Benchmark on the Test Set {'with ' + noise_name + ' Motion Blur Noise' if (noise_type is not None) else ''} {('(a=' + noise_amplitude + ')' if ((noise_type is not None) and (noise_amplitude.startswith('uni') or noise_type.startswith('eli'))) else '')}", fontsize=13)
+        plt.xlabel("FPS", fontsize=12)
+        plt.ylabel("mAP@50", fontsize=12)
+        plt.legend(title="Models", bbox_to_anchor=(1.05, 1), loc='upper left')
+        plt.grid(True)
+        plt.tight_layout()
+        plt.show()
 
 def display_results_table(with_augmentations=False):
     # Ensure plot is centered and text (including titles) is left-aligned
