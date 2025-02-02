@@ -4,7 +4,9 @@ HW/ece046211_hw2_mlp_cnn/checkpoints/imagenette_cnn_robust.pth
 archive/
 runs/
 data/chitholian_annotated_potholes_dataset
+data/annotated_potholes_dataset_with_severity
 data/potholes_dataset
+data/potholes_dataset_with_severity_levels
 data/models/yolov8/yolov8*
 __pycache__/*
 *.pth

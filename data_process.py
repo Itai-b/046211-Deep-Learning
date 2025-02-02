@@ -1,5 +1,6 @@
 import os
 import shutil
+import argparse
 import xmltodict
 import numpy as np
 import json
@@ -72,17 +73,30 @@ def create_yolo_yaml(base_path):
     with open(os.path.join(base_path, 'yolo.yaml'), 'w') as yaml_file:
         yaml.dump(yaml_content, yaml_file, default_flow_style=False)
 
-def download_data():
+def download_data(with_severity_levels=False):
     """
     Download data from Kaggle
     """
-    kaggle_datapath = 'chitholian/annotated-potholes-dataset'
-    data_path = 'data/chitholian_annotated_potholes_dataset'
+    global img_dir, ann_dir
+
+    
+    
+    if with_severity_levels:    # Import our kaggle dataset with severity levels annotations
+        kaggle_datapath = 'idanbaru/annotated-potholes-with-severity-levels'
+        data_path = 'data/annotated_potholes_dataset_with_severity'
+        img_dir = os.path.join(data_path, 'images')
+        ann_dir = os.path.join(data_path, 'annotations')
+
+    else:   # Import chitholian's dataset without severity levels
+        kaggle_datapath = 'chitholian/annotated-potholes-dataset'
+        data_path = 'data/chitholian_annotated_potholes_dataset'
+
     if not os.path.exists(data_path):
         #Load the data from kaggle
         data = kh.dataset_download(kaggle_datapath)
         # Move the data to the correct location
         shutil.move(data, data_path)
+        
         # if the data is from chitholian, we need to split it to two folders "images" and "annotations"
         if 'chitholian' in kaggle_datapath:
             # Create the folders
@@ -100,18 +114,18 @@ def download_data():
     else:
         print('Data already exists\n')
 
-def data_preprocessing():
+def data_preprocessing(with_severity_levels=False):
     """
     Download the data, split it into train, validation, and test sets, and resize the images.
     Then add yolo appropriate annotations and add motion blur noise to the test set (natural, uniform and ellipse noise with different amplitudes).
     """
-    download_data()
+    download_data(with_severity_levels=with_severity_levels)
     
     transform = torchvision.transforms.Compose([
         torchvision.transforms.ToTensor(), # uint8 values in [0, 255] -> float tensor with values [0, 1]
     ])
     # Initialize the dataset
-    dataset = PotholeDetectionDataset(img_dir, ann_dir, transform=transform)
+    dataset = PotholeDetectionDataset(img_dir, ann_dir, transform=transform, with_severity_levels=with_severity_levels)
     
     # Split the dataset to train, validation, and test sets (70-10-20)
 
@@ -134,50 +148,75 @@ def data_preprocessing():
         "test": test_set.indices
     }
     
-    with open('./data/chitholian_annotated_potholes_dataset/our_split.json', "w") as file:
+    if with_severity_levels:    # Our annotated dataset with severity levels
+        path_to_split_json = './data/annotated_potholes_dataset_with_severity/our_split.json'
+        voc_path = 'data/annotated_potholes_dataset_with_severity/annotations'
+        yolo_path = 'data/annotated_potholes_dataset_with_severity/yolo_labels'
+        base_dir = './data/annotated_potholes_dataset_with_severity/'
+        data_dir = './data/potholes_dataset_with_severity_levels/'
+
+    else:   # chitholian's annotated dataset *without* severity levels
+        path_to_split_json = './data/chitholian_annotated_potholes_dataset/our_split.json'
+        voc_path = 'data/chitholian_annotated_potholes_dataset/annotations'
+        yolo_path = 'data/chitholian_annotated_potholes_dataset/yolo_labels'
+        base_dir = './data/chitholian_annotated_potholes_dataset/'
+        data_dir = './data/potholes_dataset/'
+
+    with open(path_to_split_json, "w") as file:
         json.dump(split_data, file, indent=4)
-    
+        
     utils.voc_to_yolo(
-        voc_path='data/chitholian_annotated_potholes_dataset/annotations',
-        yolo_path='data/chitholian_annotated_potholes_dataset/yolo_labels'
+        voc_path=voc_path,
+        yolo_path=yolo_path
     )
     utils.organize_split_from_json(
-        json_path='./data/chitholian_annotated_potholes_dataset/our_split.json',
-        base_dir='./data/chitholian_annotated_potholes_dataset/',
-        output_dir='./data/potholes_dataset/'
+        json_path=path_to_split_json,
+        base_dir=base_dir,
+        output_dir=data_dir
     )
     
-    utils.add_noise_to_test(data_dir='./data/potholes_dataset/') 
+    utils.add_noise_to_test(data_dir=data_dir) 
     
-    utils.create_augmented_train(data_dir='./data/potholes_dataset/')
+    utils.create_augmented_train(data_dir=data_dir)
 
     # Create YOLO YAML file with absolute paths
-    create_yolo_yaml(base_path='./data/potholes_dataset/')
+    create_yolo_yaml(base_path=data_dir)
 
 class PotholeSeverity(Enum):
+    """
+    Enum class for the potholes:
+        0 - No pothole (background, shouldn't be a detection target)
+        1 - General pothole, no specific severity
+    """
+    NO_POTHOLE = 0
+    POTHOLE = 1
+
+
+class PotholeSeverityLevels(Enum):
     """
     Enum class for the severity of potholes.
     The severity levels ranges from 0 (no pothole) to 4 (major pothole):
         0 - No pothole (background, shouldn't be a detection target)
-        temporary 1 - general pothole, no specific severity)
         1 - Minor pothole (road damage that is non-dangerous for padestrians)
         2 - Medium pothole (road damage that is dangerous for padestrians, but not for vehicles)
         3 - Major pothole (road damage that is dangerous for both vehicles and padestrians)
     """
     NO_POTHOLE = 0
-    POTHOLE = 1 # TODO - this label is for temporary until we classify each saverity in the data.
-    #MINOR_POTHOLE = 1
-    #MEDIUM_POTHOLE = 2
-    #MAJOR_POTHOLE = 3
+    MINOR_POTHOLE = 1
+    MEDIUM_POTHOLE = 2
+    MAJOR_POTHOLE = 3
 
-def get_label_name(label):
+def get_label_name(label, with_severity_levels=False):
+    if with_severity_levels:
+        return PotholeSeverityLevels(label).name
     return PotholeSeverity(label).name
 
 class PotholeDetectionDataset:
-    def __init__(self, img_dir, ann_dir, transform=None):
+    def __init__(self, img_dir, ann_dir, transform=None, with_severity_levels=False):
         self.img_dir = img_dir
         self.ann_dir = ann_dir
         self.transform = transform
+        self.severity_levels = with_severity_levels
         
         # Preprocess data
         self.img_files, self.ann_files = self._preprocess_dataset()
@@ -244,7 +283,20 @@ class PotholeDetectionDataset:
             xmax = int(float(bbox["xmax"]))
             ymax = int(float(bbox["ymax"]))
             boxes.append((xmin, ymin, xmax, ymax))
-            labels.append(PotholeSeverity.POTHOLE.value)
+            
+            if self.severity_levels == True:
+                name = obj["name"]
+                if name == 'minor_pothole':
+                    labels.append(PotholeSeverityLevels.MINOR_POTHOLE.value)
+                elif name == 'medium_pothole':
+                    labels.append(PotholeSeverityLevels.MEDIUM_POTHOLE.value)
+                elif name == 'major_pothole':
+                    labels.append(PotholeSeverityLevels.MAJOR_POTHOLE.value)
+                else:
+                    raise Exception(f"Error in parsing VOC. Severity label was: {name}. Expected: minor/medium/major_pothole.")
+            
+            else:
+                labels.append(PotholeSeverity.POTHOLE.value)
         
         return boxes, labels
     
@@ -348,13 +400,13 @@ def normalize(train_set):
     print(f"Training Set Mean: {train_mean}")
     print(f"Training Set Std: {train_std}\n")
 
-def load_data(transform, input_size=300, img_dir=img_dir, ann_dir=ann_dir):
+def load_data(transform, input_size=300, img_dir=img_dir, ann_dir=ann_dir, with_severity_levels=False):
     """
     Using the PotholeDetectionDataset class, and relevant transformation.
     Split the data into train, validation, and test sets.
     """
     # Initialize the dataset
-    dataset = PotholeDetectionDataset(img_dir, ann_dir, transform=transform)
+    dataset = PotholeDetectionDataset(img_dir, ann_dir, transform=transform, with_severity_levels=with_severity_levels)
 
     # Split the dataset to train, validation, and test sets (70-10-20)
 
@@ -392,7 +444,7 @@ def convert_to_imshow_format(image, mean=train_mean, std=train_std):
     # Convert from CHW to HWC
     return image.transpose(1, 2, 0)
 
-def show_images(images, targets, title=""):
+def show_images(images, targets, title="", with_severity_levels=False):
     # Create a figure with subplots
     fig, axes = plt.subplots(1, len(images), figsize=(len(images)*3, 5))
 
@@ -405,10 +457,19 @@ def show_images(images, targets, title=""):
         
         # Draw bounding boxes and labels
         for box, label in zip(target["boxes"], target["labels"]):
+            color_rgb = (255,0,0)   # set to RED by default
+            if with_severity_levels:
+                if label.item() == PotholeSeverityLevels.MINOR_POTHOLE.value:
+                    color_rgb = (21,176,26) # plt's #15b01a GREEN for MINOR POTHOLE
+                if label.item() == PotholeSeverityLevels.MEDIUM_POTHOLE.value:
+                    color_rgb = (255,166,0) # plt's #ffa500 ORANGE for MEDIUM POTHOLE
+                if label.item() == PotholeSeverityLevels.MAJOR_POTHOLE.value:
+                    color_rgb = (229,0,0) # plt's #e50000 RED for MAJOR POTHOLE
+            
             cv2.rectangle(img_np,
                         (int(box[0]), int(box[1])),
                         (int(box[2]), int(box[3])),
-                        (255, 0, 0), 2)  
+                        color_rgb, 2)  
             # label_name = get_label_name(label.item())
             # cv2.putText(img_np,
             #             label_name,
@@ -451,7 +512,7 @@ def visualize_predictions(images, targets, all_predictions, threshold=0.5, show_
                     continue
                 xmin, ymin, xmax, ymax = map(int, box)
                 cv2.rectangle(img_np, (xmin, ymin), (xmax, ymax), (255, 0, 0), 2)
-                if show_severity:
+                if show_severity: ## TODO: edit this
                     cv2.putText(img_np, 
                                 f"P: {get_label_name(label)}: {score:.2f}", 
                                 (xmin, ymin - 10), 
@@ -477,11 +538,11 @@ def visualize_predictions(images, targets, all_predictions, threshold=0.5, show_
     plt.tight_layout()
     plt.show()
     
-def display_images_from_trainset():
+def display_images_from_trainset(with_severity_levels=False):
     """
     Load and display a few random images from the train dataset.
     """
-    download_data()
+    download_data(with_severity_levels=with_severity_levels)
 
     input_size = 300
 
@@ -491,28 +552,65 @@ def display_images_from_trainset():
         torchvision.transforms.Normalize(mean=train_mean.tolist(), std=train_std.tolist())
     ])
 
-    train_set, _, _ = load_data(transform=transform, input_size=input_size)
+    train_set, _, _ = load_data(transform=transform, input_size=input_size, with_severity_levels=with_severity_levels)
     
     train_loader = DataLoader(train_set, batch_size=5, shuffle=True, collate_fn=collate_fn)
     images, targets = next(iter(train_loader))
-    show_images(images, targets, title="Random Images From The Training Set")
+    show_images(images, targets, title="Random Images From The Training Set", with_severity_levels=with_severity_levels)
+
 
 if __name__ == "__main__":
-    if not (
-        os.path.exists('data/potholes_dataset') and
-        os.path.exists('data/potholes_dataset/test_eli01') and
-        os.path.exists('data/potholes_dataset/test_eli001') and
-        os.path.exists('data/potholes_dataset/test_eli005') and
-        os.path.exists('data/potholes_dataset/test_nat') and
-        os.path.exists('data/potholes_dataset/test_uni01') and
-        os.path.exists('data/potholes_dataset/test_uni001') and
-        os.path.exists('data/potholes_dataset/test_uni005') and
-        os.path.exists('data/potholes_dataset/test') and 
-        os.path.exists('data/potholes_dataset/val') and 
-        os.path.exists('data/potholes_dataset/train') and 
-        os.path.exists('data/potholes_dataset/train_augmented') 
-    ):
-        data_preprocessing()  
-    else:
-        print('Data already was proccesed\n')
+    # Set up argument parsing
+    parser = argparse.ArgumentParser(description="Load dataset from kaggle, with or without severity levels.")
     
+    # Add argument for 'with_severity_levels'
+    parser.add_argument(
+        '--with_severity_levels', 
+        type=bool, 
+        default=False, 
+        help='Whether to include severity levels in the data processing (True/False).'
+    )
+    
+    # Parse the arguments
+    args = parser.parse_args()
+    
+    # Access the boolean value
+    with_severity_levels = args.with_severity_levels
+    
+    if with_severity_levels:
+        if not (
+            os.path.exists('data/potholes_dataset_with_severity_levels') and
+            os.path.exists('data/potholes_dataset_with_severity_levels/test_eli01') and
+            os.path.exists('data/potholes_dataset_with_severity_levels/test_eli001') and
+            os.path.exists('data/potholes_dataset_with_severity_levels/test_eli005') and
+            os.path.exists('data/potholes_dataset_with_severity_levels/test_nat') and
+            os.path.exists('data/potholes_dataset_with_severity_levels/test_uni01') and
+            os.path.exists('data/potholes_dataset_with_severity_levels/test_uni001') and
+            os.path.exists('data/potholes_dataset_with_severity_levels/test_uni005') and
+            os.path.exists('data/potholes_dataset_with_severity_levels/test') and 
+            os.path.exists('data/potholes_dataset_with_severity_levels/val') and 
+            os.path.exists('data/potholes_dataset_with_severity_levels/train') and 
+            os.path.exists('data/potholes_dataset_with_severity_levels/train_augmented') 
+        ):
+            data_preprocessing(with_severity_levels=True)  
+        else:
+            print('Data already was processed\n')
+
+    else:    
+        if not (
+            os.path.exists('data/potholes_dataset') and
+            os.path.exists('data/potholes_dataset/test_eli01') and
+            os.path.exists('data/potholes_dataset/test_eli001') and
+            os.path.exists('data/potholes_dataset/test_eli005') and
+            os.path.exists('data/potholes_dataset/test_nat') and
+            os.path.exists('data/potholes_dataset/test_uni01') and
+            os.path.exists('data/potholes_dataset/test_uni001') and
+            os.path.exists('data/potholes_dataset/test_uni005') and
+            os.path.exists('data/potholes_dataset/test') and 
+            os.path.exists('data/potholes_dataset/val') and 
+            os.path.exists('data/potholes_dataset/train') and 
+            os.path.exists('data/potholes_dataset/train_augmented') 
+        ):
+            data_preprocessing(with_severity_levels=False)  
+        else:
+            print('Data already was processed\n')
