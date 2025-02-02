@@ -42,6 +42,7 @@ def create_yolo_yaml(base_path):
         'train': os.path.abspath(os.path.join(base_path, 'train/images/')),
         'val': os.path.abspath(os.path.join(base_path, 'val/images/')),
         'test': os.path.abspath(os.path.join(base_path, 'test/images/')),
+        'train_augmented': os.path.abspath(os.path.join(base_path, 'train_augmented/images/')),
         'noisy_test_nat': os.path.abspath(os.path.join(base_path, 'test_nat/images/')),
         'noisy_test_eli001': os.path.abspath(os.path.join(base_path, 'test_eli001/images/')),
         'noisy_test_eli005': os.path.abspath(os.path.join(base_path, 'test_eli005/images/')),
@@ -55,6 +56,7 @@ def create_yolo_yaml(base_path):
         'train': paths['train'],
         'val': paths['val'],
         'test': paths['test'],
+        'train_augmented': paths['train_augmented'],
         'noisy_test_nat': paths['noisy_test_nat'],
         'noisy_test_eli001': paths['noisy_test_eli001'],
         'noisy_test_eli005': paths['noisy_test_eli005'],
@@ -147,6 +149,8 @@ def data_preprocessing():
     
     utils.add_noise_to_test(data_dir='./data/potholes_dataset/') 
     
+    utils.create_augmented_train(data_dir='./data/potholes_dataset/')
+
     # Create YOLO YAML file with absolute paths
     create_yolo_yaml(base_path='./data/potholes_dataset/')
 
@@ -494,7 +498,20 @@ def display_images_from_trainset():
     show_images(images, targets, title="Random Images From The Training Set")
 
 if __name__ == "__main__":
-    if not os.path.exists('data/potholes_dataset'):
+    if not (
+        os.path.exists('data/potholes_dataset') and
+        os.path.exists('data/potholes_dataset/test_eli01') and
+        os.path.exists('data/potholes_dataset/test_eli001') and
+        os.path.exists('data/potholes_dataset/test_eli005') and
+        os.path.exists('data/potholes_dataset/test_nat') and
+        os.path.exists('data/potholes_dataset/test_uni01') and
+        os.path.exists('data/potholes_dataset/test_uni001') and
+        os.path.exists('data/potholes_dataset/test_uni005') and
+        os.path.exists('data/potholes_dataset/test') and 
+        os.path.exists('data/potholes_dataset/val') and 
+        os.path.exists('data/potholes_dataset/train') and 
+        os.path.exists('data/potholes_dataset/train_augmented') 
+    ):
         data_preprocessing()  
     else:
         print('Data already was proccesed\n')

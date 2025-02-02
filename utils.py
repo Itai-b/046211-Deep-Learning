@@ -199,7 +199,8 @@ def noise_test(source_dir, target_dir, kernel_type, amp=0):
     # Copy corresponding labels
     copy_labels(source_label_dir, target_label_dir)
     copy_labels(source_annot_dir, target_annot_dir)
-    
+
+
 def add_noise_to_test(data_dir):
     """
     Add different motion blur noise to the test set.
@@ -214,11 +215,49 @@ def add_noise_to_test(data_dir):
     noise_test(test_dir, os.path.join(data_dir, 'test_uni005'), kernel_type='uniform', amp=0.05)
     noise_test(test_dir, os.path.join(data_dir, 'test_uni01'), kernel_type='uniform', amp=0.1)
 
+
+def create_augmented_train(data_dir):
+    """
+    Create an augmented train set for YOLO (not supporting kornia).
+    The augmented train is created using random motion blur to an image with Kornia.
+    """
+    source_dir = os.path.join(data_dir, 'train')
+    target_dir = os.path.join(data_dir, 'train_augmented')
+
+    source_image_dir = os.path.join(source_dir, 'images')
+    source_label_dir = os.path.join(source_dir, 'labels')
+    source_annot_dir = os.path.join(source_dir, 'annotations')
+    target_image_dir = os.path.join(target_dir, 'images')
+    target_label_dir = os.path.join(target_dir, 'labels')
+    target_annot_dir = os.path.join(target_dir, 'annotations')
+    
+    #create target directories
+    os.makedirs(target_image_dir, exist_ok=True)
+    os.makedirs(target_label_dir, exist_ok=True)
+    os.makedirs(target_annot_dir, exist_ok=True)
+    
+    # Iterate over images in train and create an augmented copy of them under 'train_augmented'
+    for filename in os.listdir(source_image_dir):
+        if filename.lower().endswith(('.png', '.jpg')):
+            image_path = os.path.join(source_image_dir, filename)
+            image = cv2.imread(image_path)
+            if image is not None:
+                blurred_image = motion_blur.motion_blur(image, kernel_type='kornia')
+                output_path = os.path.join(target_image_dir, filename)
+                cv2.imwrite(output_path, blurred_image)
+            else:
+                print(f"Failed to load image: {filename}")
+
+    # Copy corresponding labels to the 'train_augmented' dir
+    copy_labels(source_label_dir, target_label_dir)
+    copy_labels(source_annot_dir, target_annot_dir)
+
+
 def plot_test_results(noise_type=None, show_augmentations=False):
     # Ensure plot is centered
     display(HTML("<style>.output_wrapper, .output { display: flex; justify-content: center; }</style>"))
     
-    with open("models_data copy.json", "r") as f:
+    with open("models_data.json", "r") as f:
         data = json.load(f)
 
     relevant_noises = ['uni001', 'uni005', 'uni01', 'eli001', 'eli005', 'eli01', 'nat']

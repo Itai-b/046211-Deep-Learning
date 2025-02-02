@@ -5,6 +5,8 @@ import torchvision
 import numpy as np
 import random as rnd
 import matplotlib.pyplot as plt
+import kornia.augmentation as K     # USED ONLY FOR CREATING THE AUGMENTED TRAIN, THE TEST IT SELF-IMPLEMENTED SYNTHESIZED MOITON BLUR
+from kornia.augmentation.container import AugmentationSequential
 
 
 def uniform_kernel(kernel_size=50, thickness=0, angle=45):
@@ -211,6 +213,30 @@ def apply_camera_shake_blur(image, kernel_path='./data/motion_blur_data'):
     return image_filtered, kernel
 
 
+def apply_kornia_motion_blur(image, kornia_params=None):
+    if kornia_params == None:
+        # Define the default augmentation (motion blur of kornia, randomize for probability of 40%)
+        kornia_params = {
+            'kernel_size' : (3, 51),   # set kenrel size to be odd number (not so critical because even only creates a small shift but okay)
+            'angle' : (-180.0, 180.0), # allow full motion blur angle (x,y axes)
+            'direction' : (-1.0, 1.0), # allow full motion blur direction (z-axis)
+            'p' : 0.4,                 # 40% probability
+            'same_on_batch' : False,
+        }
+    
+    aug_list = AugmentationSequential(
+        K.RandomMotionBlur(
+            kernel_size = kornia_params['kernel_size'],
+            angle = kornia_params['angle'],
+            direction = kornia_params['direction'],
+            p = kornia_params['p'],
+            same_on_batch = kornia_params['same_on_batch'],
+        )
+    )
+
+    return aug_list(image)
+
+
 def motion_blur(image, kernel_type='uniform', a=0.2, return_kernel=False, kernel_path='./data/motion_blur_data'):
     """
     Applies motion blur to an image using a generated PSF kernel.
@@ -225,25 +251,47 @@ def motion_blur(image, kernel_type='uniform', a=0.2, return_kernel=False, kernel
     - Motion-blurred image (numpy.ndarray / torch.Tensor - depends on the input)
     - Motion blur kernel used (numpy.ndarray, ONLY WHEN return_kernel=True)
     """
-    # Convert to numpy array if the image is in Tensor format:
-    if isinstance(image, torch.Tensor):
-        image = image.permute(1, 2, 0).numpy()  # Convert from CxHxW to HxWxC
-        tensor_format = True
-    else:
-        tensor_format = False
-    
-    if kernel_type == 'uniform':
-        blurred_image, kernel = apply_uniform_motion_blur(image=image, amplitude=a)
-    elif kernel_type == 'ellipse':
-        blurred_image, kernel = apply_ellipse_motion_blur(image=image, amplitude=a)
-    elif kernel_type == 'natural' or kernel_type == 'camera_shake':
-        blurred_image, kernel = apply_camera_shake_blur(image=image, kernel_path=kernel_path)
-    else:   # Invalid type, return original image with no kernel
-        blurred_image, kernel = (image, np.zeros((1,1)))
+    tensor_format = isinstance(image, torch.Tensor)
 
-    # Post-process the data and return np.array / tensor depends on the input
-    if tensor_format:   # working with tensor input, returning a tensor output
-        blurred_image = torchvision.transforms.ToTensor()(blurred_image)
+    if kernel_type == 'kornia': # Kornia requires a tensor to work
+        if not tensor_format:
+            image = torchvision.transforms.ToTensor()(image)    # Convert HxWxC -> CxHxW 
+        image = image.unsqueeze(0)  # add batch dimension
+        
+        # Apply kornia's augmentation
+        blurred_image = apply_kornia_motion_blur(image=image, kornia_params=None) # Use default params
+        
+        # Kornia does not expose the kernel (very sus...) so return None
+        kernel = None
+
+        # If the original input was not a tensor, convert back to NumPy format 
+        blurred_image = blurred_image.squeeze(0) # (squeeze(0) to remove batch_dimension)
+        if not tensor_format:
+            blurred_image = blurred_image.permute(1, 2, 0).numpy()  # Convert CxHxW -> HxWxC
+            blurred_image = (blurred_image * 255).astype(np.uint8)  # Convert float [0,1] -> uint8 [0,255]
+    
+    else: # all other kernels requires NumPy formatted image
+        # Convert to numpy array if the image is in Tensor format:
+        if tensor_format:
+            image = image.permute(1, 2, 0).numpy()  # Convert CxHxW -> HxWxC
+             # Note: the [0,1] to [0,255] stretch is not necessary here because if the image was a tensor
+             #       we return it as a tensor, and the stretching back and forth is redundant.
+             #       the convoltion is spatial invariant (SI) so stretching -> convolving is equal to convolving -> stretching.
+             #       Moreover, convolving a kernel on a [0,1] is better because it prevents overflow above 255. 
+        
+        # Apply the selected blur method
+        if kernel_type == 'uniform':
+            blurred_image, kernel = apply_uniform_motion_blur(image=image, amplitude=a)
+        elif kernel_type == 'ellipse':
+            blurred_image, kernel = apply_ellipse_motion_blur(image=image, amplitude=a)
+        elif kernel_type == 'natural' or kernel_type == 'camera_shake':
+            blurred_image, kernel = apply_camera_shake_blur(image=image, kernel_path=kernel_path)
+        else:   # Invalid type, return original image with no kernel
+            blurred_image, kernel = (image, np.zeros((1,1)))
+
+        # Post-process the data and return np.array / tensor depends on the input
+        if tensor_format:   # working with tensor input, returning a tensor output
+            blurred_image = torchvision.transforms.ToTensor()(blurred_image)    # Convert HxWxC -> CxHxW
 
     if return_kernel:
         return blurred_image, kernel
