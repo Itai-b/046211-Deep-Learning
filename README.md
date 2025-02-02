@@ -190,13 +190,13 @@ These augmentations were chosen to help the model generalize better to different
 ### Results on the Test Set Test Set with Uniform Motion Blur
 
 <div align="center">
-  <img src="./data/plots/test_map_fps/uniform_test_map_fps.png" style="height: 500px;"/>
+  <img src="./data/plots/test_map_fps/uniform_test_map_fps.png" style="height: 250px;"/>
 </div>
 
 ### Results on the Test Set with Ellipse Motion Blur
 
 <div align="center">
-  <img src="./data/plots/test_map_fps/ellipse_test_map_fps.png" style="height: 500px;"/>
+  <img src="./data/plots/test_map_fps/ellipse_test_map_fps.png" style="height: 250px;"/>
 </div>
 
 ### Results on the Test Set with Natural Motion Blur
