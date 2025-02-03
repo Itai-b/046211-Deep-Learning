@@ -8,6 +8,7 @@ data/annotated_potholes_dataset_with_severity
 data/potholes_dataset
 data/potholes_dataset_with_severity_levels
 data/models/yolov8/yolov8*
+data/potholes_video
 __pycache__/*
 *.pth
 *.pt
