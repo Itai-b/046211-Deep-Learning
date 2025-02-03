@@ -31,8 +31,11 @@ op_val_set = None
 save_path = None
 
 # define a sequence of augmentations
-aug_list = AugmentationSequential(      
+aug_list = AugmentationSequential(     
     K.RandomMotionBlur(kernel_size=(3, 51), angle=(-180.0, 180.0), direction=(-1.0, 1.0), p=0.4),  # Random motion blur
+    K.RandomGaussianBlur(kernel_size=(3, 3), sigma=(0.1, 2.0), p=0.4),  # Random Gaussian blur
+    K.RandomSharpness(sharpness=(0.5, 2.0), p=0.3),  # Random sharpness
+    K.ColorJiggle(brightness=0.2, contrast=0.2, saturation=0.2, p=0.2),  # Random color jitter
     same_on_batch=False,
 )
 

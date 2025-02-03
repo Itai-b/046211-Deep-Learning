@@ -33,6 +33,10 @@ In this project we trained different state-of-the-art (SOTA) object detection mo
 
 Moreover, we created our own dataset where we classified the potholes into three severity levels: `low`, `medium`, and `high`. This classification was based on how dangerous a pothole is to cars and pedestrians, which can help prioritize road maintenance efforts and allocate resources more effectively. The dataset was annotated with bounding boxes and severity labels, enabling the models to learn to detect and classify potholes simultaneously.
 
+<div align="center">
+  <img src="./data/readme/yolo_video.gif" alt="Pothole Detection" width="600">
+</div>
+
 ## Table of Contents
 
 ## Files in the repository
@@ -167,9 +171,10 @@ To cope with the motion blur noise, we applied the following data augmentations 
 
 | **Augmentation**       | **Parameters**                                                                 | **Description**                                                                 |
 |------------------------|---------------------------------------------------------------------------------|---------------------------------------------------------------------------------|
-| [`RandomMotionBlur`](https://kornia.readthedocs.io/en/latest/augmentation.module.html#kornia.augmentation.RandomMotionBlur)     | `kernel_size=(3, 51)`, `angle=(-180.0, 180.0)`, `direction=(-1.0, 1.0)`, `p=0.4` | Applies random motion blur to simulate camera shake and motion blur.            |
-| [`RandomGaussianBlur`](https://kornia.readthedocs.io/en/latest/augmentation.module.html#kornia.augmentation.RandomGaussianBlur)   | `kernel_size=(3, 3)`, `sigma=(0.1, 2.0)`, `p=0.3`                               | Applies random Gaussian blur to simulate out-of-focus blur.                     |
-| [`RandomSharpness`](https://kornia.readthedocs.io/en/latest/augmentation.module.html#kornia.augmentation.RandomSharpness)      | `sharpness=(0.5, 2.0)`, `p=0.3`                                                 | Adjusts the sharpness of the image to simulate varying levels of focus.         |
+| `RandomMotionBlur`     | `kernel_size=(3, 51)`, `angle=(-180.0, 180.0)`, `direction=(-1.0, 1.0)`, `p=0.4` | Apply random motion blur.                                                      |
+| `RandomGaussianBlur`   | `kernel_size=(3, 3)`, `sigma=(0.1, 2.0)`, `p=0.3`                               | Apply random Gaussian blur to simulate out-of-focus blur.                      |
+| `RandomSharpness`      | `sharpness=(0.5, 2.0)`, `p=0.3`                                                 | Adjust the sharpness of the image to simulate varying levels of focus.         |
+| `ColorJiggle`          | `brightness=0.2`, `contrast=0.2`, `saturation=0.2`, `p=0.2`                      | Apply a random transformation to the brightness, contrast, saturation, and hue.|
 
 These augmentations were chosen to help the model generalize better to different types of blur that might be encountered in real-world scenarios.
 - The `RandomMotionBlur` simulates the effect of motion blur caused by camera shake or object movement.
