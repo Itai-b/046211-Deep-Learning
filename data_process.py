@@ -34,7 +34,7 @@ train_std = torch.tensor([0.1826, 0.1745, 0.1723])
 img_dir = 'data/chitholian_annotated_potholes_dataset/images'
 ann_dir = 'data/chitholian_annotated_potholes_dataset/annotations'
 
-def create_yolo_yaml(base_path):
+def create_yolo_yaml(base_path, multiple_classes=False):
     """
     Create a yolo.yaml file with absolute paths.
     """
@@ -53,6 +53,17 @@ def create_yolo_yaml(base_path):
         'noisy_test_uni01': os.path.abspath(os.path.join(base_path, 'test_uni01/images/'))
     }
 
+    if multiple_classes:
+        # YOLO doesn't count background as class
+        classes = [
+            'minor_pothole',
+            'medium_pothole',
+            'major_pothole'
+        ]
+
+    else:
+        classes = ['pothole']
+
     yaml_content = {
         'train': paths['train'],
         'val': paths['val'],
@@ -65,8 +76,8 @@ def create_yolo_yaml(base_path):
         'noisy_test_uni001': paths['noisy_test_uni001'],
         'noisy_test_uni005': paths['noisy_test_uni005'],
         'noisy_test_uni01': paths['noisy_test_uni01'],
-        'nc': 1,  # number of classes
-        'names': ['pothole']
+        'nc': len(classes),     # Number of classes (not included background)
+        'names': classes
     }
 
     # Write to yolo.yaml
@@ -79,8 +90,6 @@ def download_data(with_severity_levels=False):
     """
     global img_dir, ann_dir
 
-    
-    
     if with_severity_levels:    # Import our kaggle dataset with severity levels annotations
         kaggle_datapath = 'idanbaru/annotated-potholes-with-severity-levels'
         data_path = 'data/annotated_potholes_dataset_with_severity'
@@ -180,7 +189,7 @@ def data_preprocessing(with_severity_levels=False):
     utils.create_augmented_train(data_dir=data_dir)
 
     # Create YOLO YAML file with absolute paths
-    create_yolo_yaml(base_path=data_dir)
+    create_yolo_yaml(base_path=data_dir, multiple_classes=with_severity_levels)
 
 class PotholeSeverity(Enum):
     """

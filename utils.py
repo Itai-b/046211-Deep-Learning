@@ -76,7 +76,16 @@ def voc_to_yolo(voc_path, yolo_path):
 
         yolo_annotations = []
         for obj in annotations:
-            cls = 0  # Assuming a single class (pothole), TODO: add the pothole severities
+            name = obj['name']
+            if name == 'minor_pothole' or name == 'pothole':
+                cls = 0
+            elif name == 'medium_pothole':
+                cls = 1
+            elif name == 'major_pothole':
+                cls = 2
+            else:
+                raise Exception(f"Error in creating yolo annotations from VOC. Name was: {name}, expected: minor/medium/major_pothole.")
+            
             bbox = obj['bndbox']
             xmin = int(bbox['xmin'])
             ymin = int(bbox['ymin'])

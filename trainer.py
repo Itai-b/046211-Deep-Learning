@@ -126,6 +126,8 @@ def train(model, train_loader, val_loader, optimizer, lr_scheduler, num_epochs=1
         train_time += (end_time - start_time)
         print(f"Epoch {epoch + 1}/{num_epochs}, Train Loss: {epoch_loss:.4f}, Val mAP@50: {mean_ap:.4f}, FPS: {fps:.2f}, Epoch Time: {(end_time - start_time):.2f} seconds")
     
+    os.makedirs(save_path, exist_ok=True)
+
     if trial is not None:
         # Save the best trained model:
         torch.save(best_model_state_dict, os.path.join(save_path, f"{model_name_global}_{trial.number}_best.pth"))
@@ -151,7 +153,7 @@ def train(model, train_loader, val_loader, optimizer, lr_scheduler, num_epochs=1
     
     return history
     
-def train_from_config(model_config_path, train_set, val_set, save_path="data/models", kornia_aug=False):
+def train_from_config(model_config_path, train_set, val_set, save_path="data/models", kornia_aug=False, with_severity_levels=False):
     with open(model_config_path, 'r') as f:
         model_config = json.load(f)
     
@@ -172,7 +174,7 @@ def train_from_config(model_config_path, train_set, val_set, save_path="data/mod
         collate_fn=data_process.collate_fn
     )
     
-    model = get_model(model_name=model_name, preweight_mode=params['preweight_mode'])
+    model = get_model(model_name=model_name, preweight_mode=params['preweight_mode'], with_severity_levels=with_severity_levels)
     if model is None:
         raise ValueError("Invalid model")
     
@@ -211,15 +213,19 @@ def train_from_config(model_config_path, train_set, val_set, save_path="data/mod
     
     return history
 
-def get_model(model_name="", trial=None, preweight_mode='fine_tuning'):
+def get_model(model_name="", trial=None, preweight_mode='fine_tuning', with_severity_levels=False):
     global model_name_global
     
     if trial is not None:
         model_name = model_name_global
         preweight_mode = trial.suggest_categorical('preweight_mode', ['random', 'freezing', 'fine_tuning'])
     
-    # TODO: Add more models
-    
+    # Retrieve the list of input channels, based of the dataset (annotations alone / annotations with severity levels)
+    if with_severity_levels:
+        num_classes = len(data_process.PotholeSeverityLevels)
+    else:
+        num_classes = len(data_process.PotholeSeverity)
+
     if str.startswith(model_name, "fasterrcnn"):
         if model_name == "fasterrcnn_resnet50_fpn":
             if preweight_mode == 'random':
@@ -244,8 +250,6 @@ def get_model(model_name="", trial=None, preweight_mode='fine_tuning'):
         else:
             return None
         
-        # Replace the classifier with a single-class output
-        num_classes = len(data_process.PotholeSeverity)
         in_features = model.roi_heads.box_predictor.cls_score.in_features
         model.roi_heads.box_predictor = models.detection.faster_rcnn.FastRCNNPredictor(in_features, num_classes) 
         
@@ -276,7 +280,7 @@ def get_model(model_name="", trial=None, preweight_mode='fine_tuning'):
         model.head.classification_head = models.detection.retinanet.RetinaNetClassificationHead(
             in_channels=256,
             num_anchors=num_anchors,
-            num_classes=len(data_process.PotholeSeverity),
+            num_classes=num_classes,
             norm_layer=functools.partial(torch.nn.GroupNorm, 32)
         )
         
@@ -300,7 +304,7 @@ def get_model(model_name="", trial=None, preweight_mode='fine_tuning'):
         model.head.classification_head = models.detection.fcos.FCOSClassificationHead(
         in_channels=256,
         num_anchors=num_anchors,
-        num_classes=len(data_process.PotholeSeverity),
+        num_classes=num_classes,
         norm_layer=functools.partial(torch.nn.GroupNorm, 32)
         )
         
@@ -318,9 +322,7 @@ def get_model(model_name="", trial=None, preweight_mode='fine_tuning'):
             model = models.detection.ssd300_vgg16()
         else:
             model = models.detection.ssd300_vgg16(weights=models.detection.SSD300_VGG16_Weights.COCO_V1)
-
-        # Retrieve the list of input channels. 
-        num_classes = len(data_process.PotholeSeverity)
+        
         in_channels = models.detection._utils.retrieve_out_channels(model.backbone, (300, 300))
         # List containing number of anchors based on aspect ratios.
         num_anchors = model.anchor_generator.num_anchors_per_location()
@@ -354,8 +356,6 @@ def get_model(model_name="", trial=None, preweight_mode='fine_tuning'):
         else:
             model = models.detection.ssdlite320_mobilenet_v3_large(weights=models.detection.SSDLite320_MobileNet_V3_Large_Weights.COCO_V1)
 
-        # Retrieve the list of input channels. 
-        num_classes = len(data_process.PotholeSeverity)
         in_channels = models.detection._utils.retrieve_out_channels(model.backbone, (320, 320))
         # List containing number of anchors based on aspect ratios.
         num_anchors = model.anchor_generator.num_anchors_per_location()
