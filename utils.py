@@ -262,7 +262,7 @@ def create_augmented_train(data_dir):
     copy_labels(source_annot_dir, target_annot_dir)
 
 
-def plot_test_results(noise_type=None, show_augmentations=False):
+def plot_test_results(noise_type=None, show_augmentations=False, show_severity=False):
     # Ensure plot is centered
     display(HTML("<style>.output_wrapper, .output { display: flex; justify-content: center; }</style>"))
     
@@ -291,13 +291,21 @@ def plot_test_results(noise_type=None, show_augmentations=False):
     
     
     # Filter out models that have "_aug" in their name
-    filtered_models = {model: {"test_map50": model_data['test_map50'], "fps": model_data['fps'],
-                               "uni001_map50": model_data['uni001_map50'], "uni005_map50": model_data['uni005_map50'],
-                               "uni01_map50": model_data['uni01_map50'], "eli001_map50": model_data['eli001_map50'],
-                               "eli005_map50": model_data['eli005_map50'], "eli01_map50": model_data['eli01_map50'],
-                               "nat_map50": model_data['nat_map50']}
-                        for model, model_data in data.items() if ("_aug" not in model or (show_augmentations))}
-    
+    if show_severity is False:
+        filtered_models = {model: {"test_map50": model_data['test_map50'], "fps": model_data['fps'],
+                                "uni001_map50": model_data['uni001_map50'], "uni005_map50": model_data['uni005_map50'],
+                                "uni01_map50": model_data['uni01_map50'], "eli001_map50": model_data['eli001_map50'],
+                                "eli005_map50": model_data['eli005_map50'], "eli01_map50": model_data['eli01_map50'],
+                                "nat_map50": model_data['nat_map50']}
+                            for model, model_data in data.items() if (("_aug" not in model or (show_augmentations)) and ("_severity" not in model))}
+    else:
+        filtered_models = {model: {"test_map50": model_data['test_map50'], "fps": model_data['fps'],
+                                "uni001_map50": model_data['uni001_map50'], "uni005_map50": model_data['uni005_map50'],
+                                "uni01_map50": model_data['uni01_map50'], "eli001_map50": model_data['eli001_map50'],
+                                "eli005_map50": model_data['eli005_map50'], "eli01_map50": model_data['eli01_map50'],
+                                "nat_map50": model_data['nat_map50']}
+                            for model, model_data in data.items() if (("_aug" not in model or (show_augmentations)) and ("_severity" in model))}
+        
     # Assign colors to models based on their base name (without "_aug")
     base_model_names = {}
 
@@ -337,7 +345,7 @@ def plot_test_results(noise_type=None, show_augmentations=False):
         axes[0].set_ylabel("mAP@50", fontsize=12)
         handles, labels = axes[0].get_legend_handles_labels()
         fig.legend(handles, labels, title="Models", bbox_to_anchor=(1, 1), loc='upper left')
-        fig.suptitle(f"Benchmark on the Test Set with {noise_name}", fontsize=16)
+        fig.suptitle(f"Benchmark on the {'Severity ' if (show_severity) else ''}Test Set with {noise_name}", fontsize=16)
         plt.tight_layout()
         plt.show()
     else:
@@ -347,11 +355,11 @@ def plot_test_results(noise_type=None, show_augmentations=False):
             base_name = model.replace("_aug", "")
             color = colors(base_model_names[base_name])  # Assign color based on base name
             marker = 'v' if '_aug' in model else 'o'  # Use triangle for "_aug", dot for others
-            
-            plt.scatter(model_data['fps'], model_data['test_map50'], label=model, color=color, 
+            data_type = "test_map50" if noise_type is None else f"{noise_type}_map50"
+            plt.scatter(model_data['fps'], model_data[data_type], label=model, color=color, 
                         marker=marker, s=100)
 
-        plt.title(f"Benchmark on the Test Set {'with ' + noise_name + ' Motion Blur Noise' if (noise_type is not None) else ''} {('(a=' + noise_amplitude + ')' if ((noise_type is not None) and (noise_amplitude.startswith('uni') or noise_type.startswith('eli'))) else '')}", fontsize=13)
+        plt.title(f"Benchmark on the {'Severity ' if (show_severity) else ''}Test Set {'with ' + noise_name + ' Motion Blur Noise' if (noise_type is not None) else ''} {('(a=' + noise_amplitude + ')' if ((noise_type is not None) and (noise_amplitude.startswith('uni') or noise_type.startswith('eli'))) else '')}", fontsize=13)
         plt.xlabel("FPS", fontsize=12)
         plt.ylabel("mAP@50", fontsize=12)
         plt.legend(title="Models", bbox_to_anchor=(1.05, 1), loc='upper left')

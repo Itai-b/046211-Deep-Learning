@@ -2,26 +2,26 @@
 ## <h2 align="center"> "Mind the Gap" - A Deep Learning Analysis of Pothole Detection </h2>
 
 <h4 align="center">
-  <table align="center">
-    <tr>
-      <td align="center">
+  <table align="center" style="border: none;">
+    <tr style="border: none;">
+      <td align="center" style="border: none;">
         <img src="./data/readme/Itai.png" width="100" height="100"/> <br>
         <strong>Itai Benyamin</strong> <br>
         <a href="https://www.linkedin.com/in/itai-benyamin/">
-          <img src="./data/readme/LinkedInLogo.png" width="50" height="50"/>
+          <img src="./data/readme/LinkedInLogo.png" width="40" height="40"/>
         </a>
         <a href="https://github.com/Itai-b">
-          <img src="./data/readme/GitHubLogo.png" width="50" height="50"/>
+          <img src="./data/readme/GitHubLogo.png" width="40" height="40"/>
         </a>
       </td>
-      <td align="center">
+      <td align="center" style="border: none;">
         <img src="./data/readme/Idan.png" width="100" height="100"/> <br>
         <strong>Idan Baruch</strong> <br>
         <a href="https://www.linkedin.com/in/idan-baruch-76490a181/">
-          <img src="./data/readme/LinkedInLogo.png" width="50" height="50"/>
+          <img src="./data/readme/LinkedInLogo.png" width="40" height="40"/>
         </a>
         <a href="https://github.com/idanbaru">
-          <img src="./data/readme/GitHubLogo.png" width="50" height="50"/>
+          <img src="./data/readme/GitHubLogo.png" width="40" height="40"/>
         </a>
       </td>
     </tr>
@@ -29,10 +29,9 @@
 </h4>
 
 ## Abstract
+In this project we trained different state-of-the-art (SOTA) object detection models for the task of pothole detection and evaluated their performance under  self-synthesized motion blur noise. This noise was generated using randomized kernel types and sizes to simulate real-world conditions where camera shake or motion artifacts may degrade image quality. The study provides insights into how motion blur affects detection accuracy and offers recommendations for improving the robustness of automated road maintenance systems.
 
-This project focuses on the detection and classification of potholes in road infrastructure, with a specific emphasis on categorizing them by their severity levels. The goal is to develop a deep learning-based solution capable of accurately identifying potholes and determining their severity from images.
-
-We trained different state-of-the-art (SOTA) object detection models for this task and evaluated their performance under various conditions, including self-synthesized motion blur noise. This noise was generated using randomized kernel types and sizes to simulate real-world conditions where camera shake or motion artifacts may degrade image quality. The study provides insights into how motion blur affects detection accuracy and offers recommendations for improving the robustness of automated road maintenance systems.
+Moreover, we created our own dataset where we classified the potholes into three severity levels: `low`, `medium`, and `high`. This classification was based on how dangerous a pothole is to cars and pedestrians, which can help prioritize road maintenance efforts and allocate resources more effectively. The dataset was annotated with bounding boxes and severity labels, enabling the models to learn to detect and classify potholes simultaneously.
 
 ## Table of Contents
 
@@ -53,14 +52,12 @@ We trained different state-of-the-art (SOTA) object detection models for this ta
 
 ## Installation Instructions
 
-For the complete guide, with step-by-step images, please consult `Setting Up The Working Environment.pdf`
-
-1. Get Anaconda with Python 3, follow the instructions according to your OS (Windows/Mac/Linux) at: https://www.anaconda.com/download
+1. Get Anaconda with Python 3, follow the instructions according to your OS (Windows/Mac/Linux) at [link](https://www.anaconda.com/download)
 2. Install the basic packages using the provided `environment.yml` file by running: `conda env create -f config/environment.yml` which will create a new conda environment named `deep_learn`. You can use `config/environment_no_cuda.yml` for an environment that uses pytorch cpu version.
 3. Alternatively, you can create a new environment and install packages from scratch:
-In Windows open `Anaconda Prompt` from the start menu, in Mac/Linux open the terminal and run `conda create --name deep_learn`. Full guide at https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#creating-an-environment-with-commands
+In Windows open `Anaconda Prompt` from the start menu, in Mac/Linux open the terminal and run `conda create --name deep_learn`. Full guide at [link](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#creating-an-environment-with-commands)
 4. To activate the environment, open the terminal (or `Anaconda Prompt` in Windows) and run `conda activate deep_learn`
-5. Install the required libraries according to the table below (to search for a specific library and the corresponding command you can also look at https://anaconda.org/)
+5. Install the required libraries according to the table below (to search for a specific library and the corresponding command you can also look at [link](https://anaconda.org/))
 
 ### Libraries to Install
 
@@ -101,13 +98,13 @@ We created a custom torch dataset named PotholeDetectionDataset and then split t
 In this project we trained the following SOTA object detection models:
 
 [torchvision models](https://pytorch.org/vision/stable/models.html#object-detection-instance-segmentation-and-person-keypoint-detection):
-- `ssd`
-- `faster rcnn`
-- `retinanet`
-- `fcos`
+- `ssd` [SSD: Single Shot MultiBox Detector](http://dx.doi.org/10.1007/978-3-319-46448-0_2)
+- `faster rcnn` [Faster R-CNN: Towards Real-Time Object Detection with Region Proposal Networks](https://arxiv.org/abs/1506.01497)
+- `retinanet` [Focal Loss for Dense Object Detection](https://arxiv.org/abs/1708.02002)
+- `fcos` [FCOS: Fully Convolutional One-Stage Object Detection](https://arxiv.org/abs/1904.01355)
 
 [ultralytics yolo](https://docs.ultralytics.com/models/yolov8/):
-- `yolov8m`
+- `yolov8m` [YOLOv8 models documentation](https://docs.ultralytics.com/models/yolov8/)
 
 ### Hyperparameter Tuning
 In this project, hyperparameter tuning was conducted using Optuna to optimize training on various torchvision models.
@@ -149,7 +146,7 @@ The objective function was optimized using `MedianPruner` and `TPESampler` for b
 - At the end, each configuration was set to be trained with a batch size of 8 for 100 epochs.
 - Best weights achieving the highest mAP@50 on the validation set were saved.
 
-## Results
+## Pre-Augmentation Results
 
 <div align="center">
   <img src="./data/plots/training_loss_val_map.png"/>
@@ -179,7 +176,7 @@ These augmentations were chosen to help the model generalize better to different
 - The `RandomGaussianBlur` simulates the effect of out-of-focus blur, which can occur due to incorrect focus settings.
 - The `RandomSharpness` augmentation adjusts the sharpness of the image, simulating varying levels of focus and helping the model to learn to handle both sharp and blurry images.
 
-## Results
+## Post Augmentations Results
 
 ### Results on the Clean Test Set
 
@@ -226,11 +223,18 @@ These augmentations were chosen to help the model generalize better to different
 
 4. *Faster R-CNN vs YOLO vs SSD: Object Detection Algorithms*. Medium, IBM Data & AI. [Link](https://medium.com/ibm-data-ai/faster-r-cnn-vs-yolo-vs-ssd-object-detection-algorithms-18badb0e02dc).
 
-5. Tamagusko, T., Ferreira, A. *Optimizing Pothole Detection in Pavements: A Comparative Analysis of Deep Learning Models*. Eng. Proc. 2023, 36, 11. DOI: [10.3390/engproc2023036011](https://doi.org/10.3390/engproc2023036011).
+5. W. Liu, D. Anguelov, D. Erhan, C. Szegedy, S. Reed, C.-Y. Fu, and A. C. Berg. *SSD: Single Shot MultiBox Detector*. In Computer Vision – ECCV 2016, Springer International Publishing, 2016, pp. 21–37. DOI: [10.1007/978-3-319-46448-0_2](http://dx.doi.org/10.1007/978-3-319-46448-0_2).
 
-6. A. Levin, Y. Weiss, F. Durand, and W. T. Freeman. *Understanding and Evaluating Blind Deconvolution Algorithms*. 2009 IEEE Conference on Computer Vision and Pattern Recognition, Miami, FL, USA, 2009, pp. 1964-1971. DOI: [10.1109/CVPR.2009.5206815](https://doi.org/10.1109/CVPR.2009.5206815).
+6. S. Ren, K. He, R. Girshick, and J. Sun. *Faster R-CNN: Towards Real-Time Object Detection with Region Proposal Networks*. arXiv preprint arXiv:1506.01497, 2016. [Link](https://arxiv.org/abs/1506.01497).
 
-7. Atikur Rahman and Sachin Patel. *Annotated Potholes Image Dataset*. Kaggle, 2020. DOI: [10.34740/KAGGLE/DSV/973710](https://www.kaggle.com/dsv/973710).
- 
+7. T.-Y. Lin, P. Goyal, R. Girshick, K. He, and P. Dollár. *Focal Loss for Dense Object Detection*. arXiv preprint arXiv:1708.02002, 2018. [Link](https://arxiv.org/abs/1708.02002).
 
+8. Z. Tian, C. Shen, H. Chen, and T. He. *FCOS: Fully Convolutional One-Stage Object Detection*. arXiv preprint arXiv:1904.01355, 2019. [Link](https://arxiv.org/abs/1904.01355).
 
+9. Ultralytics. *YOLOv8 models documentation*. [Link](https://docs.ultralytics.com/models/yolov8/).
+
+10. T. Tamagusko and A. Ferreira. *Optimizing Pothole Detection in Pavements: A Comparative Analysis of Deep Learning Models*. Eng. Proc. 2023, 36, 11. DOI: [10.3390/engproc2023036011](https://doi.org/10.3390/engproc2023036011).
+
+11. A. Levin, Y. Weiss, F. Durand, and W. T. Freeman. *Understanding and Evaluating Blind Deconvolution Algorithms*. 2009 IEEE Conference on Computer Vision and Pattern Recognition, Miami, FL, USA, 2009, pp. 1964-1971. DOI: [10.1109/CVPR.2009.5206815](https://doi.org/10.1109/CVPR.2009.5206815).
+
+12. A. Rahman and S. Patel. *Annotated Potholes Image Dataset*. Kaggle, 2020. DOI: [10.34740/KAGGLE/DSV/973710](https://www.kaggle.com/dsv/973710).
