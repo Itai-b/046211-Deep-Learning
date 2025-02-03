@@ -149,7 +149,7 @@ The objective function was optimized using `MedianPruner` and `TPESampler` for b
 ## Pre-Augmentation Results
 
 <div align="center">
-  <img src="./data/plots/training_loss_val_map.png"/>
+  <img src="./data/plots/training_loss_val_map/training_loss_val_map.png"/>
 </div>
 
 <div align="center">
@@ -205,11 +205,11 @@ These augmentations were chosen to help the model generalize better to different
 ## Potholes Severity
 
 <div align="center">
-  <img src="./data/plots/potholes_with_severity_images.png"/>
+  <img src="./data/plots/severity_checks/potholes_with_severity_images.png"/>
 </div>
 
 <div align="center">
-  <img src="./data/plots/pothole_class_distribution.png"/>
+  <img src="./data/plots/severity_checks/pothole_class_distribution.png"/>
 </div>
 
 

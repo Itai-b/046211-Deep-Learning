@@ -359,7 +359,7 @@ def plot_test_results(noise_type=None, show_augmentations=False, show_severity=F
             plt.scatter(model_data['fps'], model_data[data_type], label=model, color=color, 
                         marker=marker, s=100)
 
-        plt.title(f"Benchmark on the {'Severity ' if (show_severity) else ''}Test Set {'with ' + noise_name + ' Motion Blur Noise' if (noise_type is not None) else ''} {('(a=' + noise_amplitude + ')' if ((noise_type is not None) and (noise_amplitude.startswith('uni') or noise_type.startswith('eli'))) else '')}", fontsize=13)
+        plt.title(f"Benchmark on the {'Severity ' if (show_severity) else ''}Test Set {'with ' + noise_name + ' ' if (noise_type is not None) else ''} {('(a=' + noise_amplitude + ')' if ((noise_type is not None) and (noise_type.startswith('uni') or noise_type.startswith('eli'))) else '')}", fontsize=13)
         plt.xlabel("FPS", fontsize=12)
         plt.ylabel("mAP@50", fontsize=12)
         plt.legend(title="Models", bbox_to_anchor=(1.05, 1), loc='upper left')
@@ -439,17 +439,21 @@ def display_results_table(with_augmentations=False):
     # Display the table
     display(df)
     
-def plot_loss_and_map():
+def plot_loss_and_map(model_name=None):
+    import json
+    import matplotlib.pyplot as plt
+    from IPython.display import HTML, display
+
     # Ensure plot is centered
     display(HTML("<style>.output_wrapper, .output { display: flex; justify-content: center; }</style>"))
     
     with open("models_data.json", "r") as f:
         data = json.load(f)
 
-    # Filter out models that have "_aug" in their name
+    # Filter out models that have "_aug" or "_severity" in their name
     filtered_models = {model: {"loss": model_data['train_losses'], "map50": model_data['val_maps']}
-                    for model, model_data in data.items() if "_aug" not in model}
-    
+                        for model, model_data in data.items() if "_aug" not in model and "_severity" not in model}
+
     # Generate distinct colors for each model (using a color palette from seaborn)
     import seaborn as sns
     colors = sns.color_palette("husl", len(filtered_models))
@@ -459,7 +463,10 @@ def plot_loss_and_map():
 
     # Plot the training losses on the left with logarithmic scale
     for idx, (model, metrics) in enumerate(filtered_models.items()):
-        ax[0].plot(metrics["loss"], label=model, color=colors[idx])
+        if model == model_name:
+            ax[0].plot(metrics["loss"], label=f"{model} (highlighted)", color=colors[idx], linewidth=3, zorder=10)
+        else:
+            ax[0].plot(metrics["loss"], label=model, color=colors[idx], linewidth=1)
 
     ax[0].set_title("Training Loss")
     ax[0].set_xlabel("Epochs")
@@ -469,7 +476,10 @@ def plot_loss_and_map():
 
     # Plot the validation map@50 on the right
     for idx, (model, metrics) in enumerate(filtered_models.items()):
-        ax[1].plot(metrics["map50"], label=model, color=colors[idx])
+        if model == model_name:
+            ax[1].plot(metrics["map50"], label=f"{model} (highlighted)", color=colors[idx], linewidth=3, zorder=10)
+        else:
+            ax[1].plot(metrics["map50"], label=model, color=colors[idx], linewidth=1)
 
     ax[1].set_title("Validation mAP@50")
     ax[1].set_xlabel("Epochs")
