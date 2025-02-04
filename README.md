@@ -215,10 +215,6 @@ To cope with the motion blur noise, we applied the following data augmentations 
 | `ColorJiggle`          | `brightness=0.2`, `contrast=0.2`, `saturation=0.2`, `p=0.2`                      | Apply a random transformation to the brightness, contrast, saturation, and hue.|
 
 These augmentations were chosen to help the model generalize better to different types of blur that might be encountered in real-world scenarios.
-- The `RandomMotionBlur` simulates the effect of motion blur caused by camera shake or object movement.
-- The `RandomGaussianBlur` simulates the effect of out-of-focus blur, which can occur due to incorrect focus settings.
-- The `RandomSharpness` augmentation adjusts the sharpness of the image, simulating varying levels of focus and helping the model to learn to handle both sharp and blurry images.
-- The `ColorJiggle` augmentation applies random transformations to the brightness, contrast, saturation, and hue of the image, helping the model to learn to handle different lighting conditions and color variations.
 
 ## Post Augmentations Results
 
