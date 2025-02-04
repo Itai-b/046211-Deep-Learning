@@ -30,7 +30,7 @@ op_train_set = None
 op_val_set = None
 save_path = None
 
-# define a sequence of augmentations
+# Our kornia augmentation list (see readme for details)
 aug_list = AugmentationSequential(     
     K.RandomMotionBlur(kernel_size=(3, 51), angle=(-180.0, 180.0), direction=(-1.0, 1.0), p=0.4),  # Random motion blur
     K.RandomGaussianBlur(kernel_size=(3, 3), sigma=(0.1, 2.0), p=0.4),  # Random Gaussian blur
@@ -40,6 +40,9 @@ aug_list = AugmentationSequential(
 )
 
 def train(model, train_loader, val_loader, optimizer, lr_scheduler, num_epochs=10, device="cuda", model_name="", save_path=None, trial=None, kornia_aug=False):
+    """
+    train function for torchvision models
+    """
     global model_name_global, aug_list
     
     model.to(device)
@@ -157,6 +160,9 @@ def train(model, train_loader, val_loader, optimizer, lr_scheduler, num_epochs=1
     return history
     
 def train_from_config(model_config_path, train_set, val_set, save_path="data/models", kornia_aug=False, with_severity_levels=False):
+    """
+    reads the model configuration from a json file and trains the model accordingly
+    """
     with open(model_config_path, 'r') as f:
         model_config = json.load(f)
     
@@ -217,6 +223,10 @@ def train_from_config(model_config_path, train_set, val_set, save_path="data/mod
     return history
 
 def get_model(model_name="", trial=None, preweight_mode='fine_tuning', with_severity_levels=False):
+    """
+    given a model name the function returns the model with the specified preweight_mode
+    if trial is not None, the function will use the trial object from optuna to suggest the preweight_mode
+    """
     global model_name_global
     
     if trial is not None:
