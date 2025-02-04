@@ -52,7 +52,7 @@ Moreover, we created our own dataset where we classified the potholes into three
 * [Files in the repository](#Files-in-the-repository)
 * [Installation Instructions](#Installation-Instructions)
   * [Libraries to Install](#Libraries-to-Install)
-* [How to Run](#How-to-Run)
+* [How to Use](#How-to-Use)
 * [Dataset](#Dataset)
 * [Object Detection Models](#Object-Detection-Models)
   * [Hyperparameter Tuning](#Hyperparameter-Tuning)
@@ -115,7 +115,7 @@ In Windows open `Anaconda Prompt` from the start menu, in Mac/Linux open the ter
 |`pytorch` (cpu)   | `conda install pytorch torchvision cpuonly -c pytorch` (<a href="https://pytorch.org/get-started/locally/">get command from PyTorch.org</a>)|
 |`pytorch` (gpu)   | `conda install pytorch torchvision pytorch-cuda=11.8 -c pytorch -c nvidia` (<a href="https://pytorch.org/get-started/locally/">get command from PyTorch.org</a>)|
 
-## How to Run
+## How to Use
 After installing the required libraries, you can run the `main.ipynb` notebook to follow through with the project results and anlysis.
 
 If you wish to train the models and evaluate them your self you can run the notebooks under `models_evaluation_with_noise` which contain the training and evaluation process for the all the models we analysed with the motion blur noise.
