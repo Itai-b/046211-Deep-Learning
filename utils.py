@@ -22,6 +22,9 @@ def calc_model_size(model):
     return num_params, model_size_mb
 
 def update_json(history, model_name, json_name="models_data.json", save_path="./"):
+    """
+    update models_data.json with the new history of a given model, if model name already exists, it will be updated.
+    """
     # Construct the full path to the JSON file
     json_path = os.path.join(save_path, json_name)
     
@@ -263,6 +266,12 @@ def create_augmented_train(data_dir):
 
 
 def plot_test_results(noise_type=None, show_augmentations=False, show_severity=False):
+    """
+    Plot the mAP@50 vs FPS for each model on the test set.
+    If noise_type is provided, it will plot the mAP@50 vs FPS for the specified noise type.
+    If show_augmentations is True, it will include models with "_aug" in their name.
+    If show_severity is True, it will **only** include models with "_severity" in their
+    """
     # Ensure plot is centered
     display(HTML("<style>.output_wrapper, .output { display: flex; justify-content: center; }</style>"))
     
@@ -368,6 +377,11 @@ def plot_test_results(noise_type=None, show_augmentations=False, show_severity=F
         plt.show()
 
 def display_results_table(with_augmentations=False, with_severity=False):
+    """
+    reads from models_data.json and displays a table with the results.
+    if with_augmentations is True, it will display the results with augmented models.
+    if with_severity is True, it will **only** display the results with severity models.
+    """
     # Ensure plot is centered and text (including titles) is left-aligned
     display(HTML("""
     <style>
@@ -451,6 +465,10 @@ def display_results_table(with_augmentations=False, with_severity=False):
     display(df)
     
 def plot_loss_and_map(model_name=None):
+    """
+    read from models_data.json and plot the training loss and validation mAP@50 over epochs for each model.
+    does not include models with models that were trained with augmentations or severity dataset.
+    """
     import json
     import matplotlib.pyplot as plt
     from IPython.display import HTML, display
