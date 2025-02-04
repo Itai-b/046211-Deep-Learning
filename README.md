@@ -5,23 +5,34 @@
   <table align="center" style="border: none;">
     <tr style="border: none;">
       <td align="center" style="border: none;">
-        <img src="./data/readme/Itai.png" width="100" height="100"/> <br>
-        <strong>Itai Benyamin</strong> <br>
-        <a href="https://www.linkedin.com/in/itai-benyamin/">
-          <img src="./data/readme/LinkedInLogo.png" width="40" height="40"/>
-        </a>
-        <a href="https://github.com/Itai-b">
-          <img src="./data/readme/GitHubLogo.png" width="40" height="40"/>
-        </a>
+        <div>
+          <img src="./data/readme/Itai.png" width="100" height="100"/> <br>
+          <strong>Itai Benyamin</strong> <br>
+          <a href="https://www.linkedin.com/in/itai-benyamin/">
+            <img src="./data/readme/LinkedInLogo.png" width="40" height="40"/>
+          </a>
+          <a href="https://github.com/Itai-b">
+            <img src="./data/readme/GitHubLogo.png" width="40" height="40"/>
+          </a>
+        </div>
       </td>
       <td align="center" style="border: none;">
-        <img src="./data/readme/Idan.png" width="100" height="100"/> <br>
-        <strong>Idan Baruch</strong> <br>
-        <a href="https://www.linkedin.com/in/idan-baruch-76490a181/">
-          <img src="./data/readme/LinkedInLogo.png" width="40" height="40"/>
-        </a>
-        <a href="https://github.com/idanbaru">
-          <img src="./data/readme/GitHubLogo.png" width="40" height="40"/>
+        <div>
+          <img src="./data/readme/Idan.png" width="100" height="100"/> <br>
+          <strong>Idan Baruch</strong> <br>
+          <a href="https://www.linkedin.com/in/idan-baruch-76490a181/">
+            <img src="./data/readme/LinkedInLogo.png" width="40" height="40"/>
+          </a>
+          <a href="https://github.com/idanbaru">
+            <img src="./data/readme/GitHubLogo.png" width="40" height="40"/>
+          </a>
+        </div>
+      </td>
+    </tr>
+    <tr style="border: none;">
+      <td colspan="2" align="center" style="border: none">
+        <a href="https://youtu.be/Lghsg8BiNpw" target="_blank">
+          <img src="./data/readme/YouTubeLogo.png" width="50" height="50"/>
         </a>
       </td>
     </tr>
@@ -38,6 +49,19 @@ Moreover, we created our own dataset where we classified the potholes into three
 </div>
 
 ## Table of Contents
+* [Files in the repository](#Files-in-the-repository)
+* [Installation Instructions](#Installation-Instructions)
+  * [Libraries to Install](#Libraries-to-Install)
+* [How to Run](#How-to-Run)
+* [Dataset](#Dataset)
+* [Object Detection Models](#Object-Detection-Models)
+  * [Hyperparameter Tuning](#Hyperparameter-Tuning)
+* [Training Results](#Training-Results)
+* [Motion Blur Noise](#Motion-Blur-Noise)
+* [Data Augmentations](#Data-Augmentations)
+* [Post Augmentations Results](#Post-Augmentations-Results)
+* [Potholes Severity](#Potholes-Severity)
+* [References](#References)
 
 ## Files in the repository
 
@@ -51,6 +75,10 @@ Moreover, we created our own dataset where we classified the potholes into three
 | `torchvision_models_train.ipynb`| Jupyter notebook for training models using torchvision.                 |
 | `models_data.json`              | Stores metadata for the models results                                  |
 | `main.ipynb`                    | Main notebook for orchestrating the project workflow.                   |
+| `models_evaluation_with_noise`   | Directory containing notebooks for training and evaluating models with motion blur noise. |
+| `models_evaluation_with_severity_levels.ipnb` | Notebook for evaluating models with pothole severity levels.       |
+| `video_inference.ipynb` | Notebook for running inference on a video using the best models. | 
+| `config`                        | Directory containing environment configuration files.                   |
 | `data`                          | Directory containing all the datasets and results                       |
 | `HW`                            | Directory for our homework assigments.                                  |
 
@@ -86,6 +114,20 @@ In Windows open `Anaconda Prompt` from the start menu, in Mac/Linux open the ter
 |`ultralytics`     | `conda install -c conda-forge ultralytics`|
 |`pytorch` (cpu)   | `conda install pytorch torchvision cpuonly -c pytorch` (<a href="https://pytorch.org/get-started/locally/">get command from PyTorch.org</a>)|
 |`pytorch` (gpu)   | `conda install pytorch torchvision pytorch-cuda=11.8 -c pytorch -c nvidia` (<a href="https://pytorch.org/get-started/locally/">get command from PyTorch.org</a>)|
+
+## How to Run
+After installing the required libraries, you can run the `main.ipynb` notebook to follow through with the project results and anlysis.
+
+If you wish to train the models and evaluate them your self you can run the notebooks under `models_evaluation_with_noise` which contain the training and evaluation process for the all the models we analysed with the motion blur noise.
+
+You can also download our weights from the following link:
+- [Google Drive](TODO)
+  
+  Just download the `data.zip` file and replace it with the existing `data` folder in the repository.
+
+The optuna hyperparameters tuning can be run using the `torchvision_models_train.ipynb` notebook. The results of the hyperparameters tuning can be viewed using the optuna dashboard (see below).
+
+You can check the pothole severity classification we added to the dataset in the `models_evaluation_with_severity_levels.ipynb` notebook.
 
 ## Dataset
 We used the following dataset from kaggle [chitholian_annotated_potholes_dataset](https://www.kaggle.com/datasets/chitholian/annotated-potholes-dataset)
@@ -150,14 +192,10 @@ The objective function was optimized using `MedianPruner` and `TPESampler` for b
 - At the end, each configuration was set to be trained with a batch size of 8 for 100 epochs.
 - Best weights achieving the highest mAP@50 on the validation set were saved.
 
-## Pre-Augmentation Results
+## Training Results
 
 <div align="center">
   <img src="./data/plots/training_loss_val_map/training_loss_val_map.png"/>
-</div>
-
-<div align="center">
-  <img src="./data/plots/test_map_fps/clean_test_map_fps.png"/>
 </div>
 
 ## Motion Blur Noise
