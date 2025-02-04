@@ -121,9 +121,9 @@ After installing the required libraries, you can run the `main.ipynb` notebook t
 If you wish to train the models and evaluate them your self you can run the notebooks under `models_evaluation_with_noise` which contain the training and evaluation process for the all the models we analysed with the motion blur noise.
 
 You can also download our weights from the following link:
-- [Google Drive](TODO)
+- [Google Drive](https://drive.google.com/drive/folders/1Zj22MpCoxBWR9_azWvHRTWe_qfoa9Fsj?usp=drive_link)
   
-  Just download the `data.zip` file and replace it with the existing `data` folder in the repository.
+  Just download the `models.zip` file and replace it with the existing `./data/models` folder in the repository.
 
 The optuna hyperparameters tuning can be run using the `torchvision_models_train.ipynb` notebook. The results of the hyperparameters tuning can be viewed using the optuna dashboard (see below).
 

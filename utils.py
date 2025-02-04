@@ -367,7 +367,7 @@ def plot_test_results(noise_type=None, show_augmentations=False, show_severity=F
         plt.tight_layout()
         plt.show()
 
-def display_results_table(with_augmentations=False):
+def display_results_table(with_augmentations=False, with_severity=False):
     # Ensure plot is centered and text (including titles) is left-aligned
     display(HTML("""
     <style>
@@ -381,7 +381,15 @@ def display_results_table(with_augmentations=False):
         data = json.load(f)
         
     # Filter models based on the "_aug" condition
-    filtered_models = {model: model_data for model, model_data in data.items() if "_aug" not in model or with_augmentations}
+    filtered_models = {model: model_data for model, model_data in data.items() if ("_aug" not in model or with_augmentations)}
+    
+    # Filter models based on the "_severity" condition
+    filtered_models = {
+        model: model_data
+        for model, model_data in filtered_models.items()
+        if (with_severity and "_severity" in model) or (not with_severity and "_severity" not in model)
+    }
+
     
     # Remove unwanted keys
     for model_data in filtered_models.values():
@@ -406,11 +414,14 @@ def display_results_table(with_augmentations=False):
     # Convert "map50" columns to percentage and round to 2 decimal points
     for column in df.columns:
         if "map50" in column.lower():
+            df[column] = pd.to_numeric(df[column], errors='coerce')  # Convert to numeric, setting errors to NaN
             df[column] = (df[column] * 100).round(2).astype(str) + '%'
         elif "model_parameters" in column.lower():
-            df[column] = df[column].astype(int).apply(lambda x: f"{x:,}")
+            df[column] = pd.to_numeric(df[column], errors='coerce').fillna(0).astype(int).apply(lambda x: f"{x:,}")
         else:
-            df[column] = df[column].round(2)
+            # Safely handle rounding only for numeric columns
+            if pd.api.types.is_numeric_dtype(df[column]):
+                df[column] = df[column].round(2)
 
     
     # Rename specific columns
